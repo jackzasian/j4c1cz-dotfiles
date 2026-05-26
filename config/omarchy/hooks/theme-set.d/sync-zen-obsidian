@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# Keep Zen Browser and Obsidian in sync with Omarchy theme changes.
+
+omarchy-theme-set-obsidian-active
+omarchy-theme-set-zen

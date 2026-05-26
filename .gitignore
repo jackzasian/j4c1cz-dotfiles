@@ -1,0 +1,33 @@
+# Secrets and credentials
+*.env
+!*.env.example
+**/credentials*
+**/secrets*
+**/*token*
+**/*api_key*
+**/*.pem
+**/*.key
+**/id_rsa
+**/id_ed25519
+
+# Backups and caches
+*.bak.*
+*.swp
+*~
+.DS_Store
+__pycache__/
+*.pyc
+
+# Large or machine-local (restore manually if needed)
+.config/Cursor/
+.config/cursor/
+.config/chromium/
+.config/clash/
+.config/clash-verge-rev/
+.config/Bitwarden/
+.config/obsidian/
+.config/LM-Studio/
+.config/'LM Studio'/
+
+# Plymouth render artifacts
+.config/omarchy/plymouth/logo-raw.png

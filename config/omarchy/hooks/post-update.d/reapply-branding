@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# Re-apply personal branding after omarchy update/refresh overwrites SDDM defaults.
+
+omarchy-branding-apply

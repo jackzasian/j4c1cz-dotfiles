@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# Keep Cursor IDE theme and extensions in sync with Omarchy theme changes.
+
+omarchy-theme-set-cursor
