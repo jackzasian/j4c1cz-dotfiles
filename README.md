@@ -16,6 +16,23 @@ cp -r config/hypr/* ~/.config/hypr/
 ln -sfn ~/dotfiles/config/omarchy ~/.config/omarchy
 ```
 
+## Waybar taskbar dedup (optional)
+
+Stock Waybar shows duplicate icons for each window. To group same-app windows:
+
+```bash
+omarchy pkg add base-devel meson ninja gobject-introspection
+./scripts/install-waybar-taskbar-dedup.sh
+```
+
+Patch: `patches/waybar-0.15.0-taskbar-dedup.patch`. See `04 Tech/Hermes/waybar-customization.md`.
+
+## Sync from live system
+
+```bash
+./sync-from-system.sh
+```
+
 After changing Plymouth assets:
 
 ```bash

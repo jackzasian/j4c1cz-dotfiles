@@ -1,0 +1,93 @@
+diff --git i/src/modules/hyprland/workspace.cpp w/src/modules/hyprland/workspace.cpp
+index 4cdd891..e4a1095 100644
+--- i/src/modules/hyprland/workspace.cpp
++++ w/src/modules/hyprland/workspace.cpp
+@@ -1,9 +1,11 @@
+ #include <json/value.h>
+ #include <spdlog/spdlog.h>
+ 
++#include <map>
+ #include <memory>
+ #include <string>
+ #include <utility>
++#include <vector>
+ 
+ #include "modules/hyprland/workspaces.hpp"
+ #include "util/command.hpp"
+@@ -287,7 +289,7 @@ void Workspace::updateTaskbar(const std::string& workspace_icon) {
+   }
+ 
+   bool isFirst = true;
+-  auto processWindow = [&](const WindowRepr& window_repr) {
++  auto processWindow = [&](const WindowRepr& window_repr, int count = 1) {
+     if (shouldSkipWindow(window_repr)) {
+       return;  // skip
+     }
+@@ -300,7 +302,11 @@ void Workspace::updateTaskbar(const std::string& workspace_icon) {
+     }
+ 
+     auto window_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL);
+-    window_box->set_tooltip_text(window_repr.window_title);
++    std::string tooltip = window_repr.window_title;
++    if (count > 1) {
++      tooltip = fmt::format("{} ({} windows)", window_repr.window_class, count);
++    }
++    window_box->set_tooltip_text(tooltip);
+     window_box->get_style_context()->add_class("taskbar-window");
+     if (window_repr.isActive) {
+       window_box->get_style_context()->add_class("active");
+@@ -334,20 +340,52 @@ void Workspace::updateTaskbar(const std::string& workspace_icon) {
+       window_box->pack_start(*window_label_after, true, true);
+     }
+ 
++    if (count > 1) {
++      auto count_label = Gtk::make_managed<Gtk::Label>(fmt::format("×{}", count));
++      window_box->pack_start(*count_label, false, false);
++    }
++
+     m_content.pack_start(*event_box, true, false);
+     event_box->show_all();
+   };
+ 
++  std::vector<std::pair<std::string, std::vector<const WindowRepr*>>> grouped;
++  std::map<std::string, size_t> class_index;
++  auto addWindow = [&](const WindowRepr& window_repr) {
++    if (shouldSkipWindow(window_repr)) {
++      return;
++    }
++    auto it = class_index.find(window_repr.window_class);
++    if (it == class_index.end()) {
++      class_index.emplace(window_repr.window_class, grouped.size());
++      grouped.emplace_back(window_repr.window_class, std::vector<const WindowRepr*>{&window_repr});
++    } else {
++      grouped[it->second].second.push_back(&window_repr);
++    }
++  };
++
+   if (m_workspaceManager.taskbarReverseDirection()) {
+     for (auto it = m_windowMap.rbegin(); it != m_windowMap.rend(); ++it) {
+-      processWindow(*it);
++      addWindow(*it);
+     }
+   } else {
+     for (const auto& window_repr : m_windowMap) {
+-      processWindow(window_repr);
++      addWindow(window_repr);
+     }
+   }
+ 
++  for (const auto& [window_class, windows] : grouped) {
++    (void)window_class;
++    const WindowRepr* repr = windows.front();
++    for (const auto* window : windows) {
++      if (window->isActive) {
++        repr = window;
++        break;
++      }
++    }
++    processWindow(*repr, static_cast<int>(windows.size()));
++  }
++
+   auto formatAfter = m_workspaceManager.formatAfter();
+   if (!formatAfter.empty()) {
+     m_labelAfter.set_markup(fmt::format(fmt::runtime(formatAfter), fmt::arg("id", id()),

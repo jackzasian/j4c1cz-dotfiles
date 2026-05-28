@@ -4,3 +4,7 @@ APPLY="${HOME}/.config/omarchy/plymouth/apply-plymouth.sh"
 if [[ -x "$APPLY" && -f "${HOME}/.config/omarchy/branding/arch-j4c1cz.txt" ]]; then
   "$APPLY" || true
 fi
+
+# proxyfix post-update
+proxyfix fix --quiet || true
+command -v omarchy-pacman-proxy-verify >/dev/null && omarchy-pacman-proxy-verify || true

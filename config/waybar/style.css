@@ -1,9 +1,10 @@
 @import "../omarchy/current/theme/waybar.css";
 
-* {
-  background-color: @background;
-  color: @foreground;
+@define-color accent #7daea3;
 
+* {
+  background: transparent;
+  color: @foreground;
   border: none;
   border-radius: 0;
   min-height: 0;
@@ -11,65 +12,150 @@
   font-size: 12px;
 }
 
+window#waybar {
+  background: transparent;
+  margin: 8px 14px 0 14px;
+}
+
+window#waybar.laptop {
+  margin: 6px 10px 0 10px;
+}
+
+window#waybar.external {
+  margin: 10px 22px 0 22px;
+}
+
+/* Three big blobs */
+.modules-left,
+.modules-center,
+.modules-right {
+  background-color: rgba(60, 56, 54, 0.72);
+  border-radius: 18px;
+  padding: 4px 16px;
+  margin: 0 6px;
+}
+
+window#waybar.laptop .modules-left,
+window#waybar.laptop .modules-center,
+window#waybar.laptop .modules-right {
+  border-radius: 16px;
+  padding: 3px 12px;
+  margin: 0 5px;
+}
+
+window#waybar.external .modules-left,
+window#waybar.external .modules-center,
+window#waybar.external .modules-right {
+  border-radius: 20px;
+  padding: 5px 18px;
+  margin: 0 8px;
+}
+
 .modules-left {
-  margin-left: 8px;
+  margin-left: 0;
 }
 
 .modules-right {
-  margin-right: 8px;
+  margin-right: 0;
+}
+
+/* Modules inside blobs — no individual backgrounds */
+#custom-omarchy,
+#clock,
+#custom-weather,
+#custom-update,
+#custom-voxtype,
+#custom-screenrecording-indicator,
+#custom-idle-indicator,
+#custom-notification-silencing-indicator,
+#custom-kdeconnect,
+#bluetooth,
+#network,
+#backlight,
+#group-audio,
+#group-tray-expander,
+#pulseaudio,
+#cpu,
+#memory,
+#battery,
+#tray,
+#custom-expand-icon {
+  background: transparent;
+  padding: 0 6px;
+  margin: 0 2px;
+  min-width: 0;
+}
+
+#workspaces {
+  background: transparent;
+  padding: 0;
+  margin: 0;
 }
 
 #workspaces button {
-  all: initial;
-  padding: 0 6px;
-  margin: 0 1.5px;
-  min-width: 9px;
+  all: unset;
+  background: transparent;
+  color: @foreground;
+  border-radius: 14px;
+  padding: 2px 8px;
+  margin: 0 3px;
+  min-width: 0;
+  font-weight: bold;
 }
 
 #workspaces button.empty {
-  opacity: 0.5;
+  opacity: 0.35;
 }
 
-#cpu,
-#battery,
-#pulseaudio,
-#custom-omarchy,
-#custom-update {
-  min-width: 12px;
-  margin: 0 7.5px;
+#workspaces button.active {
+  background-color: rgba(212, 190, 152, 0.12);
 }
 
-#tray {
-  margin-right: 16px;
+#workspaces button.visible:not(.active) {
+  background-color: rgba(212, 190, 152, 0.06);
 }
 
-#bluetooth {
-  margin-right: 17px;
+#workspaces .workspace-label {
+  padding-right: 4px;
 }
 
-#network {
-  margin-right: 13px;
+#workspaces .taskbar-window {
+  border-radius: 8px;
+  padding: 1px 3px;
+  margin: 0 1px;
+  background: transparent;
 }
 
-#custom-expand-icon {
-  margin-right: 18px;
+#workspaces .taskbar-window.active {
+  background-color: rgba(212, 190, 152, 0.12);
 }
 
-tooltip {
-  padding: 2px;
+#workspaces .taskbar-window image {
+  margin: 0 1px;
+  opacity: 0.72;
+}
+
+#workspaces .taskbar-window.active image {
+  opacity: 1;
+}
+
+#workspaces .taskbar-window label {
+  font-size: 10px;
+  opacity: 0.85;
+  padding-left: 1px;
+}
+
+#tray > * {
+  opacity: 0.85;
+}
+
+#custom-omarchy {
+  padding-left: 2px;
+  padding-right: 8px;
 }
 
 #custom-update {
   font-size: 10px;
-}
-
-#clock {
-  margin-left: 8.75px;
-}
-
-#custom-weather {
-  margin-left: 7.5px;
-  margin-right: 7.5px;
 }
 
 #custom-weather.unavailable {
@@ -85,27 +171,41 @@ tooltip {
 #custom-screenrecording-indicator,
 #custom-idle-indicator,
 #custom-notification-silencing-indicator {
-  min-width: 12px;
-  margin-left: 5px;
-  margin-right: 0;
   font-size: 10px;
-  padding-bottom: 1px;
 }
 
-#custom-screenrecording-indicator.active {
-  color: #a55555;
-}
-
+#custom-screenrecording-indicator.active,
 #custom-idle-indicator.active,
-#custom-notification-silencing-indicator.active {
-  color: #a55555;
-}
-
-#custom-voxtype {
-  min-width: 12px;
-  margin: 0 0 0 7.5px;
-}
-
+#custom-notification-silencing-indicator.active,
 #custom-voxtype.recording {
-  color: #a55555;
+  color: #ea6962;
+}
+
+#pulseaudio.input.source-muted {
+  color: #ea6962;
+}
+
+#battery.warning {
+  color: #d8a657;
+}
+
+#battery.critical {
+  color: #ea6962;
+}
+
+#custom-kdeconnect.connected {
+  color: @foreground;
+}
+
+#group-audio > box > *,
+#group-tray-expander > box > * {
+  background: transparent;
+  margin: 0 2px;
+  padding: 0 2px;
+}
+
+tooltip {
+  padding: 6px 10px;
+  background-color: rgba(60, 56, 54, 0.92);
+  border-radius: 10px;
 }

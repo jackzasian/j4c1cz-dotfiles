@@ -8,7 +8,7 @@ CONFIG_DIRS=(
   starship.toml
 )
 
-mkdir -p "${ROOT}/config" "${ROOT}/home"
+mkdir -p "${ROOT}/config" "${ROOT}/home" "${ROOT}/patches"
 for item in "${CONFIG_DIRS[@]}"; do
   src="${HOME}/.config/${item}"
   if [[ -e "$src" ]]; then
