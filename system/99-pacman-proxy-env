@@ -1,0 +1,2 @@
+# Allow pacman under sudo to use Clash mixed-port proxy from the calling shell.
+Defaults env_keep += "http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY all_proxy NO_PROXY no_proxy"

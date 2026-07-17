@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+exec "$HOME/.cursor/skills/omarchy-pacman-proxy/scripts/restore.sh" "$@"

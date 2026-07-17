@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Force pacman downloads through Clash proxy. No China mirrors.
+set -euo pipefail
+
+PACMAN_CONF=/etc/pacman.conf
+MIRRORLIST=/etc/pacman.d/mirrorlist
+CURL_PROXY_SRC="${HOME}/.local/share/omarchy/default/pacman/curl-proxy.sh"
+CURL_PROXY_DST=/etc/pacman.d/curl-proxy.sh
+SUDOERS=/etc/sudoers.d/99-pacman-proxy-env
+CLASH_CFG="${HOME}/.local/share/io.github.clash-verge-rev.clash-verge-rev/config.yaml"
+
+if [[ "$(id -u)" -ne 0 ]]; then
+  exec sudo -E bash "$0" "$@"
+fi
+
+CLASH_PORT=7897
+if [[ -f ${SUDO_USER:+$(eval echo "~$SUDO_USER")}/.local/share/io.github.clash-verge-rev.clash-verge-rev/config.yaml ]]; then
+  CLASH_CFG="$(eval echo "~$SUDO_USER")/.local/share/io.github.clash-verge-rev.clash-verge-rev/config.yaml"
+fi
+if [[ -f $CLASH_CFG ]]; then
+  CLASH_PORT=$(awk '/^mixed-port:/ {print $2; exit}' "$CLASH_CFG")
+fi
+[[ -n $CLASH_PORT ]] || CLASH_PORT=7897
+
+echo "==> Installing pacman curl proxy wrapper (Clash port $CLASH_PORT)"
+install -m 0755 "$CURL_PROXY_SRC" "$CURL_PROXY_DST"
+sed -i "s|127.0.0.1:7897|127.0.0.1:${CLASH_PORT}|" "$CURL_PROXY_DST"
+
+echo "==> Configuring pacman.conf (proxy downloads, no slow-timeout kills)"
+cp -a "$PACMAN_CONF" "${PACMAN_CONF}.bak.$(date +%Y%m%d%H%M%S)"
+sed -i '/^XferTimeout/d' "$PACMAN_CONF"
+sed -i '/^DisableDownloadTimeout/d' "$PACMAN_CONF"
+sed -i '/^XferCommand/d' "$PACMAN_CONF"
+sed -i 's/^ParallelDownloads = 5/ParallelDownloads = 1/' "$PACMAN_CONF"
+sed -i '/^ParallelDownloads = 2/s/2/1/' "$PACMAN_CONF"
+sed -i '/^ParallelDownloads/a DisableDownloadTimeout\nXferCommand = /etc/pacman.d/curl-proxy.sh %u %o' "$PACMAN_CONF"
+
+echo "==> Setting mirrorlist to official geo mirror only (proxy handles routing)"
+cat >"$MIRRORLIST" <<'EOF'
+Server = https://geo.mirror.pkgbuild.com/$repo/os/$arch
+EOF
+
+echo "==> Keeping proxy env through sudo (for anything not using XferCommand)"
+install -m 0440 /dev/stdin "$SUDOERS" <<'EOF'
+Defaults env_keep += "http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY all_proxy NO_PROXY no_proxy"
+EOF
+visudo -cf "$SUDOERS"
+
+echo "==> Patching omarchy-pkg-* to use sudo -E"
+OMARCHY_BIN="$(eval echo "~${SUDO_USER:-jackz}")/.local/share/omarchy/bin"
+for f in omarchy-pkg-add omarchy-pkg-install omarchy-pkg-remove omarchy-pkg-drop; do
+  [[ -f "$OMARCHY_BIN/$f" ]] && sed -i 's/sudo pacman/sudo -E pacman/g' "$OMARCHY_BIN/$f"
+done
+
+echo "==> Syncing databases through proxy"
+/etc/pacman.d/curl-proxy.sh "https://geo.mirror.pkgbuild.com/core/os/x86_64/core.db" /tmp/pacman-proxy-test.db
+rm -f /tmp/pacman-proxy-test.db
+pacman -Syy
+
+echo
+echo "Done. All pacman downloads now go through http://127.0.0.1:${CLASH_PORT}"
+echo "Make sure Clash Verge is running, then:"
+echo "  omarchy install gaming-retroarch"

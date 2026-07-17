@@ -1,7 +1,7 @@
 [
   {
     "name": "laptop",
-    "output": ["desc:Samsung Display Corp. ATNA40HQ10-0  0x0000003F"],
+    "output": ["eDP-1"],
     "reload_style_on_change": true,
     "layer": "top",
     "position": "top",
@@ -10,6 +10,7 @@
     "modules-left": ["custom/omarchy", "hyprland/workspaces"],
     "modules-center": ["clock"],
     "modules-right": [
+      "tray",
       "custom/kdeconnect",
       "battery",
       "memory",
@@ -23,7 +24,7 @@
       "format": "{icon} {windows}",
       "format-window-separator": " ",
       "format-icons": {
-        "default": " ",
+        "default": "·",
         "1": "1",
         "2": "2",
         "3": "3",
@@ -46,10 +47,10 @@
       },
       "workspace-taskbar": {
         "enable": true,
-        "update-active-window": true,
+        "update-active-window": false,
         "format": "{icon}",
-        "icon-size": 14,
-        "icon-theme": ["Yaru-olive", "breeze", "breeze-dark"],
+        "icon-size": 16,
+        "icon-theme": ["Yaru-olive", "Yaru", "breeze", "breeze-dark", "Adwaita"],
         "on-click-window": "hyprctl dispatch focuswindow address:{address}"
       }
     },
@@ -61,9 +62,14 @@
       "on-click": "uwsm-app -- kdeconnect-app",
       "tooltip": true
     },
+    "tray": {
+      "icon-size": 16,
+      "spacing": 6,
+      "show-passive-items": true
+    },
     "custom/omarchy": {
       "format": "<span font='omarchy'>\ue900</span>",
-      "on-click": "omarchy-menu",
+      "on-click": "uwsm-app -- omarchy-menu",
       "on-click-right": "xdg-terminal-exec",
       "tooltip-format": "Omarchy Menu\n\nSuper + Alt + Space"
     },
@@ -132,7 +138,7 @@
       "tooltip-format-discharging": "{power:>1.0f}W draw · {capacity}%",
       "tooltip-format-charging": "{power:>1.0f}W charge · {capacity}%",
       "interval": 5,
-      "on-click": "omarchy-menu power",
+      "on-click": "uwsm-app -- omarchy-menu power",
       "on-click-right": "notify-send -u low \"$(omarchy-battery-status)\"",
       "states": {
         "warning": 20,
@@ -152,7 +158,7 @@
   },
   {
     "name": "external",
-    "output": ["DP-1", "desc:Apple Computer Inc StudioDisplay 0x4E83B9D6"],
+    "output": ["DP-1", "HDMI-A-1", "Apple Computer Inc StudioDisplay 0x4E83B9D6"],
     "reload_style_on_change": true,
     "layer": "top",
     "position": "top",
@@ -169,7 +175,7 @@
       "custom/notification-silencing-indicator"
     ],
     "modules-right": [
-      "group/tray-expander",
+      "tray",
       "custom/kdeconnect",
       "bluetooth",
       "backlight",
@@ -184,7 +190,7 @@
       "format": "{icon} {windows}",
       "format-window-separator": " ",
       "format-icons": {
-        "default": " ",
+        "default": "·",
         "1": "1",
         "2": "2",
         "3": "3",
@@ -207,10 +213,10 @@
       },
       "workspace-taskbar": {
         "enable": true,
-        "update-active-window": true,
+        "update-active-window": false,
         "format": "{icon}",
         "icon-size": 18,
-        "icon-theme": ["Yaru-olive", "breeze", "breeze-dark"],
+        "icon-theme": ["Yaru-olive", "Yaru", "breeze", "breeze-dark", "Adwaita"],
         "on-click-window": "hyprctl dispatch focuswindow address:{address}"
       }
     },
@@ -224,7 +230,7 @@
     },
     "custom/omarchy": {
       "format": "<span font='omarchy'>\ue900</span>",
-      "on-click": "omarchy-menu",
+      "on-click": "uwsm-app -- omarchy-menu",
       "on-click-right": "xdg-terminal-exec",
       "tooltip-format": "Omarchy Menu\n\nSuper + Alt + Space"
     },
@@ -320,7 +326,7 @@
       "tooltip-format-discharging": "{power:>1.0f}W draw · {capacity}%",
       "tooltip-format-charging": "{power:>1.0f}W charge · {capacity}%",
       "interval": 5,
-      "on-click": "omarchy-menu power",
+      "on-click": "uwsm-app -- omarchy-menu power",
       "on-click-right": "notify-send -u low \"$(omarchy-battery-status)\"",
       "states": {
         "warning": 20,
@@ -336,21 +342,10 @@
       "tooltip-format": "Devices connected: {num_connections}",
       "on-click": "omarchy-launch-bluetooth"
     },
-    "group/tray-expander": {
-      "orientation": "inherit",
-      "drawer": {
-        "transition-duration": 600,
-        "children-class": "tray-group-item"
-      },
-      "modules": ["custom/expand-icon", "tray"]
-    },
-    "custom/expand-icon": {
-      "format": "",
-      "tooltip": false,
-      "on-scroll-up": "",
-      "on-scroll-down": "",
-      "on-scroll-left": "",
-      "on-scroll-right": ""
+    "tray": {
+      "icon-size": 16,
+      "spacing": 6,
+      "show-passive-items": true
     },
     "custom/screenrecording-indicator": {
       "on-click": "omarchy-capture-screenrecording",
@@ -382,10 +377,6 @@
       "tooltip": true,
       "on-click-right": "omarchy-voxtype-config",
       "on-click": "omarchy-voxtype-model"
-    },
-    "tray": {
-      "icon-size": 14,
-      "spacing": 8
     }
   }
 ]

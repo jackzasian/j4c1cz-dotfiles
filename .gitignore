@@ -31,3 +31,12 @@ __pycache__/
 
 # Plymouth render artifacts
 .config/omarchy/plymouth/logo-raw.png
+config/omarchy/plymouth/logo-raw.png
+
+# Noise / local install logs
+**/.hyprspace-install.log
+**/install.log
+**/*.log
+
+# Large theme caches / generated
+config/omarchy/current/next-theme-gen/

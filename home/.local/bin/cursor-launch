@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Launch Cursor with Clash proxy flags (required with TUN fake-ip).
+
+set -euo pipefail
+
+source "${HOME}/.config/omarchy/proxy.sh" 2>/dev/null || true
+
+PORT=$(_clash_mixed_port 2>/dev/null || echo 7897)
+FLAGS_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/electron-flags.conf"
+
+if ! _clash_listening 2>/dev/null; then
+  notify-send -u critical "Cursor" "Start Clash Verge first — Cursor needs proxy on 127.0.0.1:${PORT}." 2>/dev/null || \
+    echo "Start Clash Verge first — Cursor needs proxy on 127.0.0.1:${PORT}" >&2
+fi
+
+# Keep electron-flags.conf in sync with live mixed port
+mkdir -p "$(dirname "$FLAGS_FILE")"
+if [[ ! -f "$FLAGS_FILE" ]] || ! grep -qF "proxy-server=http://127.0.0.1:${PORT}" "$FLAGS_FILE" 2>/dev/null; then
+  {
+    echo "# Electron/Chromium flags for Cursor — required with Clash TUN fake-ip"
+    echo "# Updated by cursor-launch / cursor-tools fix-proxy"
+    echo "--proxy-server=http://127.0.0.1:${PORT}"
+  } >"$FLAGS_FILE"
+fi
+
+exec /usr/share/cursor/cursor "$@"

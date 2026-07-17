@@ -1,0 +1,57 @@
+/* Omarchy transparency overrides — loaded after Zen mods. Do not edit. */
+
+:root:not([zen-compact-mode="true"]) #navigator-toolbox {
+  --zen-navigator-toolbox-background: transparent !important;
+}
+
+:root[zen-compact-mode="true"] #titlebar {
+  --zen-colors-tertiary: transparent !important;
+}
+
+#navigator-toolbox,
+#zen-toolbar-background,
+#zen-toolbar-background::after,
+.zen-toolbar-background,
+.zen-toolbar-background::after,
+#zen-appcontent-navbar-container,
+#zen-appcontent-navbar-wrapper,
+#titlebar::before {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+#sidebar-box,
+#zen-sidebar-splitter,
+#zen-sidebar-web-panel {
+  background-color: transparent !important;
+}
+
+/* Tab sidebar chrome — keep wallpaper/blur visible (separate from page content) */
+#navigator-toolbox,
+#zen-tabbox-wrapper,
+#titlebar,
+#TabsToolbar,
+#zen-tabs-wrapper,
+#zen-main-app-wrapper,
+.zen-browser-generic-background {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Transparent Zen mod: compact sidebar type adds opaque titlebar overlay — override it */
+#main-window:has([mod-sameerasw_zen_compact_sidebar_type="2"]) #titlebar::before,
+#main-window:has([mod-sameerasw_zen_compact_sidebar_type="1"]) #titlebar::before {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Opaque page/video layer only — not sidebar/toolbar chrome */
+.browserStack > browser,
+#tabbrowser-tabpanels,
+#tabbrowser-tabpanels > hbox {
+  background-color: var(--zen-branding-dark, #282828) !important;
+}
+
+video {
+  background-color: #000 !important;
+}

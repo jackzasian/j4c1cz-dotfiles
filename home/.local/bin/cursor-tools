@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Dispatcher for Cursor developer tools (delegates proxy work to proxyfix).
+
+set -euo pipefail
+
+HOME="${HOME:-/home/jackz}"
+TOOLS="${HOME}/.cursor/tools"
+PROXYFIX="${HOME}/Developer/Proxyfix/proxyfix"
+
+cmd="${1:-fix-all}"
+shift || true
+
+case "$cmd" in
+  fix-all|fix|doctor|repair)
+    exec bash "${TOOLS}/fix-all.sh" "$@"
+    ;;
+  fix-proxy|proxy)
+    exec "$PROXYFIX" fix --app cursor "$@"
+    ;;
+  status)
+    exec "$PROXYFIX" status "$@"
+    ;;
+  sync-theme)
+    exec bash "${TOOLS}/sync-theme.sh" "$@"
+    ;;
+  test-network|test)
+    exec "$PROXYFIX" test "$@"
+    ;;
+  detect)
+    exec "$PROXYFIX" detect "$@"
+    ;;
+  download)
+    exec "$PROXYFIX" download "$@"
+    ;;
+  -h|--help|help)
+    cat <<EOF
+cursor-tools — Cursor/Omarchy repair scripts
+
+  fix-all, fix, doctor, repair   Proxy + timers + folder sort + network test
+  fix-proxy, proxy               proxyfix fix --app cursor
+  status                         proxyfix status
+  detect                         proxyfix detect
+  test-network, test             connectivity smoke tests
+  sync-theme                     Omarchy → Cursor theme sync
+  download URL [out]             proxyfix smart download
+
+Proxy core: proxyfix (~/Developer/Proxyfix)
+EOF
+    ;;
+  *)
+    echo "Unknown command: $cmd" >&2
+    echo "Run: cursor-tools help" >&2
+    exit 1
+    ;;
+esac

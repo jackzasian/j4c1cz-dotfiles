@@ -1,0 +1,2 @@
+#!/bin/bash
+exec "$HOME/Developer/Proxyfix/proxyfix" "$@"

@@ -24,8 +24,8 @@ need git
 rm -rf "$BUILD_DIR"
 git clone --depth 1 --branch "$VERSION" https://github.com/Alexays/Waybar "$BUILD_DIR"
 patch -d "$BUILD_DIR" -p1 < "$PATCH"
-meson setup "$BUILD_DIR/build" --prefix=/usr --buildtype=release
+meson setup "$BUILD_DIR/build" --prefix="$HOME/.local" --buildtype=release
 ninja -C "$BUILD_DIR/build"
-sudo ninja -C "$BUILD_DIR/build" install
+ninja -C "$BUILD_DIR/build" install
 omarchy restart waybar
-echo "Installed patched Waybar ${VERSION} (taskbar dedup by app class)."
+echo "Installed patched Waybar ${VERSION} to ~/.local/bin (taskbar dedup by app class)."

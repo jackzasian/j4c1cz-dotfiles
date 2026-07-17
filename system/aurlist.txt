@@ -1,0 +1,15 @@
+clash-verge-rev-bin
+durdraw
+electron37
+hyprmoncfg
+libretro-bsnes2014
+libretro-mame2016
+orca-slicer
+spicetify-cli
+spicetify-cli-debug
+stacher7
+ticktick
+ttf-nanum
+wechat-bin
+xr-hardware
+zen-browser-bin

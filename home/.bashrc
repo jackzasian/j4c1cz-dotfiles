@@ -17,3 +17,4 @@ source ~/.local/share/omarchy/default/bash/rc
 export PATH="$PATH:/home/jackz/.lmstudio/bin"
 # End of LM Studio CLI section
 
+export PATH="$HOME/bin:$PATH"

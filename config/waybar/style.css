@@ -35,12 +35,27 @@ window#waybar.external {
   margin: 0 6px;
 }
 
-window#waybar.laptop .modules-left,
+window#waybar.laptop .modules-left {
+  border-radius: 16px;
+  padding: 3px 12px;
+  margin: 0 5px;
+  min-width: 0;
+}
+
 window#waybar.laptop .modules-center,
 window#waybar.laptop .modules-right {
   border-radius: 16px;
   padding: 3px 12px;
   margin: 0 5px;
+}
+
+window#waybar.laptop #workspaces button {
+  padding: 2px 6px;
+}
+
+window#waybar.laptop #workspaces .taskbar-window image {
+  min-width: 16px;
+  min-height: 16px;
 }
 
 window#waybar.external .modules-left,
@@ -115,6 +130,62 @@ window#waybar.external .modules-right {
   background-color: rgba(212, 190, 152, 0.06);
 }
 
+#custom-ws-1,
+#custom-ws-2,
+#custom-ws-3,
+#custom-ws-4,
+#custom-ws-5 {
+  all: unset;
+  background: transparent;
+  color: @foreground;
+  border-radius: 14px;
+  padding: 2px 8px;
+  margin: 0 3px;
+  min-width: 0;
+  font-weight: bold;
+}
+
+#custom-ws-1.empty,
+#custom-ws-2.empty,
+#custom-ws-3.empty,
+#custom-ws-4.empty,
+#custom-ws-5.empty {
+  opacity: 0.35;
+}
+
+#custom-ws-1.active,
+#custom-ws-2.active,
+#custom-ws-3.active,
+#custom-ws-4.active,
+#custom-ws-5.active {
+  background-color: rgba(212, 190, 152, 0.12);
+}
+
+#custom-ws-1.visible:not(.active),
+#custom-ws-2.visible:not(.active),
+#custom-ws-3.visible:not(.active),
+#custom-ws-4.visible:not(.active),
+#custom-ws-5.visible:not(.active) {
+  background-color: rgba(212, 190, 152, 0.06);
+}
+
+#custom-ws-1 img,
+#custom-ws-2 img,
+#custom-ws-3 img,
+#custom-ws-4 img,
+#custom-ws-5 img {
+  margin: 0 1px;
+  opacity: 0.72;
+}
+
+#custom-ws-1.active img,
+#custom-ws-2.active img,
+#custom-ws-3.active img,
+#custom-ws-4.active img,
+#custom-ws-5.active img {
+  opacity: 1;
+}
+
 #workspaces .workspace-label {
   padding-right: 4px;
 }
@@ -147,6 +218,12 @@ window#waybar.external .modules-right {
 
 #tray > * {
   opacity: 0.85;
+  min-width: 16px;
+  min-height: 16px;
+}
+
+window#waybar.laptop #tray {
+  padding: 0 4px;
 }
 
 #custom-omarchy {
