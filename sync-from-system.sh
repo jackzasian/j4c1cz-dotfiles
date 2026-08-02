@@ -27,7 +27,7 @@ done
 
 # Local bin wrappers (no secrets): proxyfix stubs, cursor-tools, pacman-proxy helpers
 mkdir -p "${ROOT}/home/.local/bin"
-for b in cursor-tools proxyfix omarchy-pacman-proxy-backup omarchy-pacman-proxy-restore omarchy-pacman-proxy-verify omarchy-fix-pacman-install cursor-launch; do
+for b in cursor-tools proxyfix clash-secure-localhost omarchy-pacman-proxy-backup omarchy-pacman-proxy-restore omarchy-pacman-proxy-verify omarchy-fix-pacman-install cursor-launch; do
   src="${HOME}/.local/bin/${b}"
   [[ -f "$src" || -L "$src" ]] && cp -a "$src" "${ROOT}/home/.local/bin/"
 done

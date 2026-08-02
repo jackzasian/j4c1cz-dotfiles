@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Enforce Clash mihomo localhost-only settings after profile updates.
+set -euo pipefail
+
+SOCK=/tmp/verge/verge-mihomo.sock
+CFG=${CLASH_VERGE_CONFIG:-$HOME/.local/share/io.github.clash-verge-rev.clash-verge-rev/config.yaml}
+PATCH='{"allow-lan":false,"bind-address":"127.0.0.1","external-controller":"127.0.0.1:9097"}'
+
+patch_config_file() {
+  [[ -f $CFG ]] || return 0
+  local tmp changed=0
+  tmp=$(mktemp)
+  if grep -qE '^allow-lan:[[:space:]]*true' "$CFG"; then
+    sed 's/^allow-lan:[[:space:]]*true/allow-lan: false/' "$CFG" >"$tmp" && mv "$tmp" "$CFG"
+    changed=1
+  fi
+  if ! grep -qE '^bind-address:[[:space:]]*127\.0\.0\.1' "$CFG"; then
+    if grep -qE '^bind-address:' "$CFG"; then
+      sed 's/^bind-address:.*/bind-address: 127.0.0.1/' "$CFG" >"$tmp" && mv "$tmp" "$CFG"
+    elif grep -qE '^allow-lan:' "$CFG"; then
+      sed '/^allow-lan:/a bind-address: 127.0.0.1' "$CFG" >"$tmp" && mv "$tmp" "$CFG"
+    fi
+    changed=1
+  fi
+  # if/fi (not &&) so the function returns 0 when nothing changed —
+  # otherwise set -e kills the script in the steady "already secure" state.
+  if (( changed )); then
+    logger -t clash-secure-localhost "Updated $CFG on disk"
+  fi
+}
+
+patch_runtime() {
+  local i allow_lan
+  for i in $(seq 1 30); do
+    [[ -S $SOCK ]] && break
+    sleep 2
+  done
+  [[ -S $SOCK ]] || return 1
+
+  allow_lan=$(curl -sfS --max-time 3 --unix-socket "$SOCK" http://localhost/configs 2>/dev/null \
+    | python3 -c "import json,sys; print(json.load(sys.stdin).get('allow-lan', True))" 2>/dev/null || echo true)
+
+  if [[ ${allow_lan,,} != false ]]; then
+    curl -sfS --max-time 5 --unix-socket "$SOCK" -X PATCH http://localhost/configs \
+      -H 'Content-Type: application/json' \
+      -d "$PATCH" >/dev/null
+    logger -t clash-secure-localhost "Runtime PATCH: allow-lan=false bind-address=127.0.0.1"
+  fi
+}
+
+patch_config_file
+patch_runtime || true
