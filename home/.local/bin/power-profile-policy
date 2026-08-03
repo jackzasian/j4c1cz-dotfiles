@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Switch power-profiles-daemon profile based on AC/battery state.
+# AC: balanced. Battery: power-saver. Idempotent — only calls
+# powerprofilesctl when the profile actually needs to change.
+set -euo pipefail
+
+ac_online=0
+if [[ -r /sys/class/power_supply/AC/online ]]; then
+  ac_online="$(cat /sys/class/power_supply/AC/online)"
+elif [[ -r /sys/class/power_supply/ACAD/online ]]; then
+  ac_online="$(cat /sys/class/power_supply/ACAD/online)"
+else
+  # No AC sysfs — assume plugged in (desktops / VMs)
+  ac_online=1
+fi
+
+desired="power-saver"
+[[ "$ac_online" == "1" ]] && desired="balanced"
+
+current="$(powerprofilesctl get)"
+if [[ "$current" != "$desired" ]]; then
+  powerprofilesctl set "$desired"
+  echo "power-profile-policy: switched $current -> $desired (AC=$ac_online)"
+fi

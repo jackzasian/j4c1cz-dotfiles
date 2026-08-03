@@ -27,6 +27,26 @@ omarchy pkg add base-devel meson ninja gobject-introspection
 
 Patch: `patches/waybar-0.15.0-taskbar-dedup.patch`. See `04 Tech/Hermes/waybar-customization.md`.
 
+## Power profile auto-switch (AC/battery)
+
+`config/systemd/user/power-profile-policy.{service,timer}` + `home/.local/bin/power-profile-policy`
+switch `power-profiles-daemon` automatically: `balanced` on AC, `power-saver` on
+battery. Checked every 2 minutes, idempotent (only calls `powerprofilesctl set`
+when the profile actually needs to change). No `sudo` required.
+
+```bash
+# Install
+cp home/.local/bin/power-profile-policy ~/.local/bin/
+cp config/systemd/user/power-profile-policy.* ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now power-profile-policy.timer
+```
+
+Manual overrides via the Omarchy power-profile menu get reverted within 2
+minutes — same "no sticky override" convention as
+`~/Developer/omarchy-services/scripts/battery-policy.sh`. See
+`04 Tech/Hermes/power-profile-policy.md` for full context and the undo steps.
+
 ## Sync from live system
 
 ```bash
