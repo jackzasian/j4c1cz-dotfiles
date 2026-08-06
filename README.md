@@ -1,6 +1,13 @@
 # j4c1cz dotfiles (Omarchy / Hyprland)
 
-Private backup of Linux desktop configuration.
+My Omarchy / Hyprland desktop configuration for Arch Linux.
+
+## Security
+
+This repo is public but scrubbed: exact home coordinates, street address, and
+machine identifiers (machine-id, disk PARTUUIDs) are removed. `location.conf`
+files are kept at city level only, and `sync-from-system.sh` preserves those
+redactions on every sync.
 
 ## Layout
 

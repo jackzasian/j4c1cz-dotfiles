@@ -16,7 +16,9 @@ for item in "${CONFIG_DIRS[@]}"; do
       rsync -a --delete --exclude='*.bak.*' "$src" "${ROOT}/config/"
     else
       mkdir -p "${ROOT}/config/$(dirname "$item")"
-      rsync -aL --delete --exclude='*.bak.*' "$src/" "${ROOT}/config/${item}/"
+      # location.conf holds real home coords/address — keep the repo's redacted copy.
+      rsync -aL --delete --exclude='*.bak.*' --exclude='location.conf' \
+        "$src/" "${ROOT}/config/${item}/"
     fi
   fi
 done
@@ -57,7 +59,13 @@ if [[ -d /etc/limine-entry-tool.d ]]; then
   # readable drop-ins only (no sudo required for most)
   cp -a /etc/limine-entry-tool.d/*.conf "${SNAP}/limine-entry-tool.d/" 2>/dev/null || true
 fi
-[[ -f /boot/limine.conf ]] && cp -f /boot/limine.conf "${SNAP}/limine.conf" 2>/dev/null || true
+# Scrub machine identifiers when dumping limine.conf (public repo).
+if [[ -f /boot/limine.conf ]]; then
+  sed -E \
+    -e 's/machine-id=[0-9a-f]{32}/machine-id=<machine-id-redacted>/g' \
+    -e 's/PARTUUID=[0-9a-f-]{36}/PARTUUID=<partuuid-redacted>/g' \
+    /boot/limine.conf >"${SNAP}/limine.conf" 2>/dev/null || true
+fi
 
 # Migration-risk baselines: plugin state, cursor/theme gsettings, timer list
 hyprpm list >"${SNAP}/hyprpm-list.txt" 2>/dev/null || true
