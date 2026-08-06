@@ -1,0 +1,102 @@
+diff --git i/bin/omarchy-pkg-add w/bin/omarchy-pkg-add
+index 4db19e05..5d4961cf 100755
+--- i/bin/omarchy-pkg-add
++++ w/bin/omarchy-pkg-add
+@@ -6,7 +6,7 @@
+ # omarchy:requires-sudo=true
+ 
+ if omarchy-pkg-missing "$@"; then
+-  sudo pacman -S --noconfirm --needed "$@" || exit 1
++  sudo -E pacman -S --noconfirm --needed "$@" || exit 1
+ fi
+ 
+ for pkg in "$@"; do
+diff --git i/bin/omarchy-pkg-aur-accessible w/bin/omarchy-pkg-aur-accessible
+index fae95172..3ec5f19f 100755
+--- i/bin/omarchy-pkg-aur-accessible
++++ w/bin/omarchy-pkg-aur-accessible
+@@ -2,5 +2,13 @@
+ 
+ # omarchy:summary=Returns true if the AUR is up and available.
+ 
+-curl -sf --connect-timeout 30 --retry 3 --retry-delay 3 -A "omarchy-update" \
++# shellcheck source=/dev/null
++source "${HOME}/.local/bin/omarchy-pkg-aur-env" 2>/dev/null || true
++
++port=7897
++if [[ -f ${HOME}/.local/share/io.github.clash-verge-rev.clash-verge-rev/config.yaml ]]; then
++  port=$(awk '/^mixed-port:/ {print $2; exit}' "${HOME}/.local/share/io.github.clash-verge-rev.clash-verge-rev/config.yaml")
++fi
++
++curl -sf --proxy "http://127.0.0.1:${port}" --connect-timeout 30 --retry 3 --retry-delay 3 -A "omarchy-update" \
+   "https://aur.archlinux.org/rpc/?v=5&type=info&arg=base" >/dev/null
+diff --git i/bin/omarchy-pkg-aur-add w/bin/omarchy-pkg-aur-add
+index 7a152be7..d746a2be 100755
+--- i/bin/omarchy-pkg-aur-add
++++ w/bin/omarchy-pkg-aur-add
+@@ -3,6 +3,9 @@
+ # omarchy:summary=Add the named packages to the system from the AUR if they're missing. Returns false if it couldn't be done.
+ # omarchy:args=<packages...>
+ 
++# shellcheck source=/dev/null
++source "${HOME}/.local/bin/omarchy-pkg-aur-env" 2>/dev/null || true
++
+ if omarchy-pkg-missing "$@"; then
+   yay -S --noconfirm --needed "$@" || exit 1
+ fi
+diff --git i/bin/omarchy-pkg-drop w/bin/omarchy-pkg-drop
+index 7e5dd4b2..18d841e1 100755
+--- i/bin/omarchy-pkg-drop
++++ w/bin/omarchy-pkg-drop
+@@ -6,11 +6,11 @@
+ 
+ installed=()
+ for pkg in "$@"; do
+-  if pacman -Qq | grep -Fxq "$pkg"; then
++  if pacman -Q "$pkg" &>/dev/null; then
+     installed+=("$pkg")
+   fi
+ done
+ 
+ if (( ${#installed[@]} > 0 )); then
+-  sudo pacman -Rns --noconfirm "${installed[@]}"
++  sudo -E pacman -Rns --noconfirm "${installed[@]}"
+ fi
+diff --git i/bin/omarchy-pkg-install w/bin/omarchy-pkg-install
+index 15e5e288..8164bdd0 100755
+--- i/bin/omarchy-pkg-install
++++ w/bin/omarchy-pkg-install
+@@ -21,6 +21,6 @@ if [[ -n $pkg_names ]]; then
+   source omarchy-sudo-keepalive
+ 
+   # Convert newline-separated selections to space-separated for pacman
+-  echo "$pkg_names" | tr '\n' ' ' | xargs sudo pacman -S --noconfirm
++  echo "$pkg_names" | tr '\n' ' ' | xargs sudo -E pacman -S --noconfirm
+   omarchy-show-done
+ fi
+diff --git i/bin/omarchy-pkg-remove w/bin/omarchy-pkg-remove
+index 486d3772..4d445207 100755
+--- i/bin/omarchy-pkg-remove
++++ w/bin/omarchy-pkg-remove
+@@ -19,6 +19,6 @@ pkg_names=$(yay -Qqe | fzf "${fzf_args[@]}")
+ 
+ if [[ -n $pkg_names ]]; then
+   # Convert newline-separated selections to space-separated for yay
+-  echo "$pkg_names" | tr '\n' ' ' | xargs sudo pacman -Rns --noconfirm
++  echo "$pkg_names" | tr '\n' ' ' | xargs sudo -E pacman -Rns --noconfirm
+   omarchy-show-done
+ fi
+diff --git i/bin/omarchy-update-aur-pkgs w/bin/omarchy-update-aur-pkgs
+index 4f496b33..efbfdbc6 100755
+--- i/bin/omarchy-update-aur-pkgs
++++ w/bin/omarchy-update-aur-pkgs
+@@ -2,6 +2,9 @@
+ 
+ # omarchy:summary=Update AUR packages if any are installed
+ 
++# shellcheck source=/dev/null
++source "${HOME}/.local/bin/omarchy-pkg-aur-env" 2>/dev/null || true
++
+ if pacman -Qem >/dev/null; then
+   if omarchy-pkg-aur-accessible; then
+     echo -e "\e[32m\nUpdate AUR packages\e[0m"

@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIRS=(
   hypr waybar omarchy fastfetch alacritty foot ghostty kitty mako walker
   swayosd btop lazygit uwsm environment.d git fontconfig
-  fcitx5 mise starship.toml
+  fcitx5 mise starship.toml systemd/user
 )
 
 mkdir -p "${ROOT}/config" "${ROOT}/home" "${ROOT}/patches"
@@ -25,12 +25,22 @@ for f in .bashrc .zshrc .profile .bash_profile; do
   [[ -f "${HOME}/${f}" ]] && cp -f "${HOME}/${f}" "${ROOT}/home/${f}"
 done
 
-# Local bin wrappers (no secrets): proxyfix stubs, cursor-tools, pacman-proxy helpers
+# Local bin: full directory, minus anything that looks like it holds a secret.
 mkdir -p "${ROOT}/home/.local/bin"
-for b in cursor-tools proxyfix clash-secure-localhost omarchy-pacman-proxy-backup omarchy-pacman-proxy-restore omarchy-pacman-proxy-verify omarchy-fix-pacman-install cursor-launch; do
-  src="${HOME}/.local/bin/${b}"
-  [[ -f "$src" || -L "$src" ]] && cp -a "$src" "${ROOT}/home/.local/bin/"
-done
+SECRET_PATTERN='password|token|api[_-]?key|secret|BEGIN (RSA|OPENSSH) PRIVATE KEY'
+BIN_SRC="${HOME}/.local/bin/"
+FLAGGED="$(grep -rilE "$SECRET_PATTERN" "$BIN_SRC" 2>/dev/null || true)"
+BIN_EXCLUDES=()
+if [[ -n "$FLAGGED" ]]; then
+  echo "WARNING: excluding ${BIN_SRC} files that matched a secret-like pattern (review manually):"
+  while IFS= read -r f; do
+    echo "  - ${f#$BIN_SRC}"
+    BIN_EXCLUDES+=(--exclude="${f#$BIN_SRC}")
+  done <<<"$FLAGGED"
+fi
+# -a (not -aL): keep symlinks as symlinks — several point at large versioned
+# tool installs (cursor-agent, python3.11, pipx venvs) that must not be copied in.
+rsync -a --delete --exclude='*.bak.*' "${BIN_EXCLUDES[@]}" "$BIN_SRC" "${ROOT}/home/.local/bin/"
 
 # System safety dump (lists + boot/pacman drop-ins; no secrets)
 SNAP="${ROOT}/system"
@@ -48,6 +58,11 @@ if [[ -d /etc/limine-entry-tool.d ]]; then
   cp -a /etc/limine-entry-tool.d/*.conf "${SNAP}/limine-entry-tool.d/" 2>/dev/null || true
 fi
 [[ -f /boot/limine.conf ]] && cp -f /boot/limine.conf "${SNAP}/limine.conf" 2>/dev/null || true
+
+# Migration-risk baselines: plugin state, cursor/theme gsettings, timer list
+hyprpm list >"${SNAP}/hyprpm-list.txt" 2>/dev/null || true
+gsettings list-recursively org.gnome.desktop.interface >"${SNAP}/gsettings-interface.txt" 2>/dev/null || true
+systemctl --user list-timers --all --no-pager >"${SNAP}/systemd-user-timers-snapshot.txt" 2>/dev/null || true
 
 # Drop noisy install logs from the mirrored tree
 rm -f "${ROOT}/config/hypr/.hyprspace-install.log"
