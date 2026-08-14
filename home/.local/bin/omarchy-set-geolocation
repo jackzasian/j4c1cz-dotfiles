@@ -1,0 +1,256 @@
+#!/usr/bin/env bash
+# Detect location (GPS → GeoClue → direct IP) and apply geo mock to Zen + Chromium.
+set -euo pipefail
+
+LOC="${HOME}/.config/omarchy/location.conf"
+EXT_DIR="${HOME}/.local/share/omarchy/default/chromium/extensions/fixed-geolocation"
+ZEN_USER_GLOB="${HOME}/.config/zen/"*/user.js
+
+detect_location() {
+  local lat lon acc city region country tz source
+
+  # gpsd
+  if command -v gpspipe >/dev/null 2>&1 && systemctl is-active gpsd >/dev/null 2>&1; then
+    read -r lat lon acc < <(
+      gpspipe -w -n 20 2>/dev/null | python3 -c '
+import json, sys
+for line in sys.stdin:
+    line = line.strip()
+    if not line.startswith("{"):
+        continue
+    try:
+        d = json.loads(line)
+    except json.JSONDecodeError:
+        continue
+    if d.get("class") != "TPV" or "lat" not in d or "lon" not in d:
+        continue
+    acc = d.get("epy", d.get("epx", 20))
+    print(d["lat"], d["lon"], acc)
+    break
+'
+    )
+    if [[ -n ${lat:-} && -n ${lon:-} ]]; then
+      source=gps
+      acc=${acc:-20}
+      city=""
+      region=""
+      country=""
+      tz=$(timedatectl show -p Timezone --value 2>/dev/null || echo Asia/Shanghai)
+      write_location "$lat" "$lon" "$acc" "$city" "$region" "$country" "$tz" "$source"
+      return 0
+    fi
+  fi
+
+  # GeoClue2 (system)
+  if busctl call org.freedesktop.GeoClue2 /org/freedesktop/GeoClue2/Manager \
+    org.freedesktop.GeoClue2.Manager GetClient >/dev/null 2>&1; then
+    local client lat_raw lon_raw
+    client=$(busctl call org.freedesktop.GeoClue2 /org/freedesktop/GeoClue2/Manager \
+      org.freedesktop.GeoClue2.Manager GetClient 2>/dev/null | awk '{print $2}' | tr -d '"')
+    lat_raw=$(busctl get-property org.freedesktop.GeoClue2 "$client" \
+      org.freedesktop.GeoClue2.Location Latitude 2>/dev/null | awk '{print $2}' || true)
+    lon_raw=$(busctl get-property org.freedesktop.GeoClue2 "$client" \
+      org.freedesktop.GeoClue2.Location Longitude 2>/dev/null | awk '{print $2}' || true)
+    if [[ -n ${lat_raw:-} && -n ${lon_raw:-} ]]; then
+      source=geoclue
+      acc=50
+      city=""
+      region=""
+      country=""
+      tz=$(timedatectl show -p Timezone --value 2>/dev/null || echo Asia/Shanghai)
+      write_location "$lat_raw" "$lon_raw" "$acc" "$city" "$region" "$country" "$tz" "$source"
+      return 0
+    fi
+  fi
+
+  # Direct IP (no proxy). Use -c so curl JSON stays on stdin (heredoc would steal it).
+  read -r lat lon city region country tz < <(
+    curl -sS --max-time 12 --noproxy '*' https://ipinfo.io/json | python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+lat, lon = d.get("loc", "0,0").split(",", 1)
+print(lat, lon, d.get("city", ""), d.get("region", ""), d.get("country", ""), d.get("timezone", "Asia/Shanghai"))
+'
+  )
+  source=ip
+  acc=100
+  write_location "$lat" "$lon" "$acc" "$city" "$region" "$country" "$tz" "$source"
+}
+
+write_location() {
+  local lat=$1 lon=$2 acc=$3 city=$4 region=$5 country=$6 tz=$7 source=$8
+  mkdir -p "$(dirname "$LOC")"
+  cat >"$LOC" <<EOF
+# Canonical location for Omarchy geo mock (Strava, hyprsunset, etc.)
+# Regenerate: omarchy-set-geolocation
+
+latitude=${lat}
+longitude=${lon}
+accuracy=${acc}
+city=${city}
+region=${region}
+country=${country}
+timezone=${tz}
+source=${source}
+EOF
+  printf 'Detected (%s): %s, %s (%s, %s)\n' "$source" "$lat" "$lon" "${city:-unknown}" "${country:-}"
+}
+
+read_location() {
+  # shellcheck source=/dev/null
+  source <(grep -E '^[a-z_]+=' "$LOC" | sed 's/^/export /')
+}
+
+apply_chromium_extension() {
+  read_location
+  mkdir -p "$EXT_DIR"
+  cat >"${EXT_DIR}/manifest.json" <<'EOF'
+{
+  "manifest_version": 3,
+  "name": "Omarchy Fixed Geolocation",
+  "version": "1.0",
+  "description": "Return fixed GPS coordinates for Strava (Omarchy)",
+  "content_scripts": [
+    {
+      "matches": ["https://*.strava.com/*", "https://strava.com/*"],
+      "js": ["inject.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ]
+}
+EOF
+  cat >"${EXT_DIR}/inject.js" <<EOF
+(() => {
+  const LAT = ${latitude};
+  const LNG = ${longitude};
+  const ACC = ${accuracy};
+  const pos = () => ({
+    coords: {
+      latitude: LAT,
+      longitude: LNG,
+      accuracy: ACC,
+      altitude: null,
+      altitudeAccuracy: null,
+      heading: null,
+      speed: null
+    },
+    timestamp: Date.now()
+  });
+  const geo = {
+    getCurrentPosition: (ok) => ok(pos()),
+    watchPosition: (ok) => { ok(pos()); return 1; },
+    clearWatch: () => {}
+  };
+  try {
+    Object.defineProperty(Navigator.prototype, "geolocation", {
+      get: () => geo,
+      configurable: true
+    });
+  } catch (_) {}
+})();
+EOF
+  ok "Chromium extension → ${EXT_DIR}"
+}
+
+apply_zen_userjs() {
+  read_location
+  # Local mock accepts POST (Google format). data: URLs break modern Firefox/Zen geo.
+  local geo_url="http://127.0.0.1:17322/v1/geolocate"
+  local zen_user
+  for zen_user in $ZEN_USER_GLOB; do
+    [[ -f $zen_user ]] || continue
+    python3 - "$zen_user" "$geo_url" <<'PY'
+import re, sys
+path, geo_url = sys.argv[1], sys.argv[2]
+text = path.read_text(encoding="utf-8") if (path := __import__("pathlib").Path(path)).exists() else ""
+block = f'''
+// omarchy-set-geolocation — fixed GPS for Strava
+user_pref("geo.enabled", true);
+user_pref("geo.provider.use_geoclue", false);
+user_pref("geo.provider.use_gpsd", false);
+user_pref("geo.provider.testing", true);
+user_pref("geo.prompt.testing", true);
+user_pref("geo.prompt.testing.allow", true);
+user_pref("geo.provider.network.url", "{geo_url.replace(chr(34), chr(92)+chr(34))}");
+'''
+if "omarchy-set-geolocation" in text:
+    text = re.sub(
+        r"\n// omarchy-set-geolocation[\s\S]*?(?=\n// |\Z)",
+        block.rstrip() + "\n",
+        text,
+        count=1,
+    )
+    # remove stale duplicate geo blocks (older runs)
+    text = re.sub(
+        r"\nuser_pref\(\"geo\.enabled\"[\s\S]*?geo\.provider\.network\.url\"[^)]*\)\);\n(?=// omarchy-set-geolocation|\Z)",
+        "\n",
+        text,
+    )
+else:
+    text = text.rstrip() + block
+path.write_text(text if text.endswith("\n") else text + "\n", encoding="utf-8")
+print(f"Zen user.js → {path}")
+PY
+  done
+}
+
+apply_chromium_flags() {
+  local flags="${HOME}/.config/chromium-flags.conf"
+  local copy_ext="${HOME}/.local/share/omarchy/default/chromium/extensions/copy-url"
+  local geo_ext="${EXT_DIR}"
+  local port
+  port=$(_clash_mixed_port 2>/dev/null || echo 7897)
+  mkdir -p "$(dirname "$flags")"
+  python3 - "$flags" "$copy_ext" "$geo_ext" "$port" <<'PY'
+import re, sys
+from pathlib import Path
+flags, copy_ext, geo_ext, port = Path(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4]
+load = f"--load-extension={copy_ext},{geo_ext}"
+proxy = f"--proxy-server=http://127.0.0.1:{port}"
+text = flags.read_text(encoding="utf-8") if flags.exists() else ""
+lines = [
+    ln for ln in text.splitlines()
+    if not ln.startswith("--load-extension=")
+    and not ln.startswith("--proxy-server=")
+    and not ln.startswith("--proxy-pac-url=")
+]
+if not any("Chromium" in ln for ln in lines):
+    lines.append("# Chromium — full Clash proxy + geo mock — omarchy-set-geolocation")
+lines.extend([proxy, load])
+flags.write_text("\n".join(lines) + "\n", encoding="utf-8")
+print("chromium-flags.conf → full proxy + fixed-geolocation")
+PY
+}
+
+ok() { printf '\033[32m✓\033[0m %s\n' "$*"; }
+
+ensure_geo_mock() {
+  systemctl --user daemon-reload 2>/dev/null || true
+  systemctl --user enable --now omarchy-geo-mock.service 2>/dev/null || true
+  if systemctl --user is-active --quiet omarchy-geo-mock.service 2>/dev/null; then
+    ok "geo-mock service active on :17322"
+  else
+    # Fallback if unit missing
+    pkill -f '/.local/bin/omarchy-geo-mock' 2>/dev/null || true
+    nohup "${HOME}/.local/bin/omarchy-geo-mock" >/tmp/omarchy-geo-mock.log 2>&1 &
+    ok "geo-mock started (fallback nohup)"
+  fi
+}
+
+
+main() {
+  [[ ${1:-} == --apply-only ]] || detect_location
+  [[ -f $LOC ]] || { echo "Missing ${LOC}; run without --apply-only first" >&2; exit 1; }
+  apply_chromium_extension
+  apply_zen_userjs
+  apply_chromium_flags
+  ensure_geo_mock
+  read_location
+  ok "Location mock active: ${latitude}, ${longitude} (${city:-}, ${source})"
+  rm -f "${HOME}/.cache/waybar-status/weather.json"
+  pkill -RTMIN+13 waybar 2>/dev/null || true
+  printf '\nRestart Zen and Chromium completely, then reload Strava.\n'
+}
+
+main "$@"

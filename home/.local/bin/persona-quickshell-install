@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# omarchy:summary=Install Persona-Quickshell packages and clone config (no Hyprland changes)
+set -euo pipefail
+
+PERSONA_DIR="${HOME}/.config/quickshell/persona"
+REPO="https://github.com/Yujonpradhananga/Persona-Quickshell.git"
+MARKER="persona-quickshell: cava-disabled"
+
+need_pacman=()
+for pkg in quickshell cava qt6-multimedia qt6-5compat qt6-svg qt6-imageformats brightnessctl; do
+  pacman -Q "$pkg" &>/dev/null || need_pacman+=("$pkg")
+done
+
+if ((${#need_pacman[@]} > 0)); then
+  echo "Installing: ${need_pacman[*]}"
+  sudo pacman -S --needed --noconfirm "${need_pacman[@]}"
+fi
+
+if [[ ! -d "${PERSONA_DIR}/.git" ]]; then
+  mkdir -p "$(dirname "${PERSONA_DIR}")"
+  git clone "${REPO}" "${PERSONA_DIR}"
+fi
+
+wallpaper="${PERSONA_DIR}/Widgets/WallpaperEngine.qml"
+if [[ -f "${wallpaper}" ]] && ! grep -qF "${MARKER}" "${wallpaper}"; then
+  python3 - "${wallpaper}" <<'PY'
+import pathlib, re, sys
+path = pathlib.Path(sys.argv[1])
+text = path.read_text()
+block = re.compile(
+    r"\n        CavaVisualizer \{[^}]*\n            id: s1_cava[^}]*\n(?:            [^\n]*\n)*        \}\n",
+    re.MULTILINE,
+)
+new, n = block.subn("\n        // persona-quickshell: cava-disabled (no Qt6-Cava-plugin)\n", text, count=1)
+if n != 1:
+    raise SystemExit("Could not patch CavaVisualizer block in WallpaperEngine.qml")
+path.write_text(new)
+PY
+  echo "Patched out CavaVisualizer (audio bars skipped for easy trial)."
+elif grep -qF "${MARKER}" "${wallpaper}" 2>/dev/null; then
+  echo "CavaVisualizer already patched — OK."
+fi
+
+echo "Persona-Quickshell ready at ${PERSONA_DIR}"
+echo "Try now:  persona-quickshell-try"
+echo "Revert:   persona-quickshell-revert"

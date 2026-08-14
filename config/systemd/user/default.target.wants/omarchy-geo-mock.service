@@ -1,0 +1,13 @@
+[Unit]
+Description=Omarchy fixed browser geolocation mock (Strava / Zen)
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/omarchy-geo-mock
+Restart=on-failure
+RestartSec=2
+Environment=OMARCHY_GEO_MOCK_PORT=17322
+
+[Install]
+WantedBy=default.target

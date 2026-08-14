@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Launch LM Studio with Clash proxy (required for model downloads with TUN fake-ip).
+
+set -euo pipefail
+
+source "${HOME}/.config/omarchy/proxy.sh" 2>/dev/null || true
+
+PORT=$(_clash_mixed_port 2>/dev/null || echo 7897)
+FLAGS_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/LM Studio/user-flags.conf"
+USER_FLAGS=()
+
+if [[ -f "${FLAGS_FILE}" ]]; then
+  mapfile -t USER_FLAGS < <(grep -v '^#' "${FLAGS_FILE}" | grep -v '^[[:space:]]*$' || true)
+fi
+
+if [[ ${#USER_FLAGS[@]} -gt 0 ]] && ! _clash_listening 2>/dev/null; then
+  notify-send -u critical "LM Studio" "Start Clash Verge first — proxy flags need mixed port." 2>/dev/null || \
+    echo "Start Clash Verge first — LM Studio proxy on 127.0.0.1:${PORT}" >&2
+fi
+
+exec /usr/bin/lm-studio "${USER_FLAGS[@]}" "$@"

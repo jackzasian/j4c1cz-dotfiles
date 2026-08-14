@@ -1,0 +1,193 @@
+#!/usr/bin/env bash
+# Battery-saver travel mode for XREAL sessions on Omarchy/Hyprland.
+set -euo pipefail
+
+# shellcheck source=/dev/null
+source "${HOME}/.local/lib/xreal/common.sh"
+
+STATE_FILE="$(xreal_state_dir)/travel.state"
+INTERNAL_SCRIPT="${HOME}/.local/bin/omarchy-hyprland-monitor-internal"
+
+read_state() {
+  local key=$1 default=${2:-}
+  if [[ -f $STATE_FILE ]]; then
+    local val
+    val=$(grep -E "^${key}=" "$STATE_FILE" 2>/dev/null | tail -1 | cut -d= -f2- || true)
+    if [[ -n $val ]]; then
+      printf '%s\n' "$val"
+      return 0
+    fi
+  fi
+  printf '%s\n' "$default"
+}
+
+write_state() {
+  mkdir -p "$(xreal_state_dir)"
+  cat >"$STATE_FILE" <<EOF
+active=${1:-0}
+internal_disabled=${2:-0}
+blur_disabled=${3:-0}
+blur_was_enabled=${4:-unknown}
+power_profile_before=${5:-unknown}
+waybar_was_running=${6:-0}
+waybar_off_was_set=${7:-0}
+EOF
+}
+
+hypr_blur_enabled() {
+  hyprctl getoption decoration:blur:enabled -j 2>/dev/null | jq -r '.int // .str // empty' 2>/dev/null || true
+}
+
+cmd_on() {
+  xreal_ensure_generated_configs
+
+  if [[ $(read_state active 0) == "1" ]]; then
+    xreal_apply_display
+    xreal_sync_window_rules
+    xreal_disable_internal_panel >/dev/null 2>&1 || true
+    [[ -z ${XREAL_QUIET:-} ]] || return 0
+    echo "Travel mode already active."
+    cmd_status
+    return 0
+  fi
+
+  local mon blur_before blur_disabled=0 internal_disabled=0 profile_before
+  local waybar_was_running=0 waybar_off_was_set=0 waybar_state
+  mon=$(xreal_require_glasses)
+  xreal_sync_window_rules
+  xreal_apply_display
+
+  profile_before=$(powerprofilesctl get 2>/dev/null | awk '{print $NF}' || echo unknown)
+  if powerprofilesctl set power-saver >/dev/null 2>&1; then
+    echo "Power profile: power-saver"
+  else
+    echo "Warning: could not set power-saver profile" >&2
+  fi
+
+  if [[ -x $INTERNAL_SCRIPT ]] && /home/jackz/.local/share/omarchy/bin/omarchy-hw-external-monitors >/dev/null 2>&1; then
+    if xreal_disable_internal_panel; then
+      internal_disabled=1
+      echo "Internal panel: disabled"
+    else
+      echo "Warning: laptop panel could not be disabled" >&2
+    fi
+  fi
+
+  blur_before=$(hypr_blur_enabled)
+  if [[ $blur_before == "1" ]]; then
+    if hyprctl keyword decoration:blur:enabled false >/dev/null 2>&1; then
+      blur_disabled=1
+      echo "Hyprland blur: disabled (temporary)"
+    fi
+  fi
+
+  waybar_state=$(xreal_waybar_hide)
+  read -r waybar_was_running waybar_off_was_set <<<"$waybar_state"
+  echo "Top bar: hidden"
+
+  write_state 1 "$internal_disabled" "$blur_disabled" "${blur_before:-unknown}" "$profile_before" \
+    "$waybar_was_running" "$waybar_off_was_set"
+  xreal_notify "XREAL travel" "Cinema mode · glasses ${mon} · top bar off"
+  echo "Travel mode ON (glasses: ${mon}). Run: xreal-travel off"
+}
+
+cmd_off() {
+  if [[ ! -f $STATE_FILE ]] || [[ $(read_state active 0) != "1" ]]; then
+    echo "Travel mode is not active."
+    return 0
+  fi
+
+  local internal_disabled blur_disabled blur_was profile_before
+  local waybar_was_running waybar_off_was_set
+  internal_disabled=$(read_state internal_disabled 0)
+  blur_disabled=$(read_state blur_disabled 0)
+  blur_was=$(read_state blur_was_enabled unknown)
+  profile_before=$(read_state power_profile_before balanced)
+  waybar_was_running=$(read_state waybar_was_running 0)
+  waybar_off_was_set=$(read_state waybar_off_was_set 0)
+
+  if [[ $internal_disabled == "1" ]]; then
+    xreal_enable_internal_panel
+    echo "Internal panel: restored"
+  fi
+
+  if [[ $blur_disabled == "1" && $blur_was == "1" ]]; then
+    hyprctl keyword decoration:blur:enabled true >/dev/null 2>&1 || true
+    echo "Hyprland blur: restored"
+  fi
+
+  xreal_waybar_restore "$waybar_was_running" "$waybar_off_was_set"
+  echo "Top bar: restored"
+
+  case $profile_before in
+    balanced|performance|power-saver)
+      powerprofilesctl set "$profile_before" >/dev/null 2>&1 || powerprofilesctl set balanced >/dev/null 2>&1 || true
+      ;;
+    *)
+      powerprofilesctl set balanced >/dev/null 2>&1 || true
+      ;;
+  esac
+  echo "Power profile: restored"
+
+  rm -f "$STATE_FILE"
+  xreal_monitor_stub >"$(xreal_state_dir)/monitor.generated.conf"
+  xreal_windowrules_stub >"$(xreal_state_dir)/windowrules.generated.conf"
+  xreal_notify "XREAL travel" "Travel mode off — displays restored"
+  echo "Travel mode OFF."
+}
+
+cmd_status() {
+  echo "=== Travel mode ==="
+  if [[ -f $STATE_FILE ]] && [[ $(read_state active 0) == "1" ]]; then
+    echo "Status: active"
+    echo "Internal disabled: $(read_state internal_disabled 0)"
+    echo "Blur disabled: $(read_state blur_disabled 0)"
+    echo "Waybar hidden by XREAL: $(read_state waybar_was_running 0) (was running)"
+    echo "Previous power profile: $(read_state power_profile_before unknown)"
+  else
+    echo "Status: inactive"
+  fi
+  echo
+  echo "=== Power ==="
+  powerprofilesctl get 2>/dev/null || echo "(powerprofilesctl unavailable)"
+  echo
+  echo "=== Glasses ==="
+  local mon
+  mon=$(xreal_find_monitor || true)
+  if [[ -n $mon ]]; then
+    echo "Monitor: $mon"
+    hyprctl monitors -j | jq -r --arg n "$mon" \
+      '.[] | select(.name==$n) | "Resolution: \(.width)x\(.height) @ scale \(.scale)"'
+  else
+    echo "Monitor: not connected"
+  fi
+}
+
+usage() {
+  cat <<'EOF'
+Usage: xreal-travel <on|off|status>
+
+  on      Power saver, hide top bar, disable laptop panel, set glasses scale 1
+  off     Restore displays, waybar, blur, and power profile
+  status  Show current travel mode state
+
+Set XREAL_NO_TRAVEL=1 to skip auto travel mode in xreal play/library/kodi.
+EOF
+}
+
+main() {
+  local cmd=${1:-}
+  case $cmd in
+    on) cmd_on ;;
+    off) cmd_off ;;
+    status) cmd_status ;;
+    -h|--help|help|"") usage ;;
+    *)
+      echo "Unknown command: $cmd" >&2
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"

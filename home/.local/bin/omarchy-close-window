@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Close the active window. Tray apps like WeChat quit on killactive — use closewindow instead.
+set -euo pipefail
+
+class=$(hyprctl activewindow -j | jq -r '.class // empty')
+
+case "$class" in
+  wechat|Weixin)
+    hyprctl dispatch closewindow class:wechat
+    ;;
+  *)
+    hyprctl dispatch killactive
+    ;;
+esac

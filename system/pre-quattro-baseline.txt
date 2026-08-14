@@ -1,0 +1,402 @@
+[0m→[0m Repository dynamic-cursors (by VirtCode):
+  │ Plugin dynamic-cursors
+  └─ enabled: [32mtrue
+[0m
+[0m→[0m Repository hyprgrass (by horriblename):
+  │ Plugin hyprgrass
+  └─ enabled: [32mtrue
+[0m
+  │ Plugin hyprgrass-backlight
+  └─ enabled: [32mtrue
+[0m
+  │ Plugin hyprgrass-pulse
+  └─ enabled: [32mtrue
+[0m
+[0m→[0m Repository Hyprspace (by 0xl30):
+  │ Plugin Hyprspace
+  └─ enabled: [32mtrue
+[0m
+---
+1431 │ single │       │ Sat 15 Aug 2026 04:00:07 AM CST │ root │ timeline │ timeline                         │
+1432 │ single │       │ Sat 15 Aug 2026 05:00:02 AM CST │ root │ timeline │ timeline                         │
+1433 │ single │       │ Sat 15 Aug 2026 06:00:00 AM CST │ root │ timeline │ timeline                         │
+---
+SPACE_LIMIT="0.5"
+FREE_LIMIT="0.2"
+NUMBER_LIMIT="50"
+NUMBER_LIMIT_IMPORTANT="10"
+TIMELINE_LIMIT_HOURLY="10"
+TIMELINE_LIMIT_DAILY="10"
+TIMELINE_LIMIT_WEEKLY="0"
+TIMELINE_LIMIT_MONTHLY="10"
+TIMELINE_LIMIT_QUARTERLY="0"
+TIMELINE_LIMIT_YEARLY="10"
+---
+Status: active
+Logging: on (low)
+Default: deny (incoming), allow (outgoing), deny (routed)
+New profiles: skip
+
+To                         Action      From
+--                         ------      ----
+Anywhere on lo             ALLOW IN    Anywhere                  
+Anywhere on tailscale0     ALLOW IN    Anywhere                  
+22/tcp on tailscale0       ALLOW IN    Anywhere                   # SSH via Tailscale
+22000/tcp on tailscale0    ALLOW IN    Anywhere                   # Syncthing via Tailscale
+53                         ALLOW IN    Anywhere                  
+67                         ALLOW IN    Anywhere                  
+445/tcp                    ALLOW IN    10.67.1.0/24              
+445/tcp                    ALLOW IN    10.69.10.0/24             
+445/tcp                    ALLOW IN    100.64.0.0/10             
+Anywhere (v6) on lo        ALLOW IN    Anywhere (v6)             
+Anywhere (v6) on tailscale0 ALLOW IN    Anywhere (v6)             
+22/tcp (v6) on tailscale0  ALLOW IN    Anywhere (v6)              # SSH via Tailscale
+22000/tcp (v6) on tailscale0 ALLOW IN    Anywhere (v6)              # Syncthing via Tailscale
+53 (v6)                    ALLOW IN    Anywhere (v6)             
+67 (v6)                    ALLOW IN    Anywhere (v6)             
+
+Anywhere                   ALLOW FWD   Anywhere on waydroid0     
+Anywhere on waydroid0      ALLOW FWD   Anywhere                  
+Anywhere (v6)              ALLOW FWD   Anywhere (v6) on waydroid0
+Anywhere (v6) on waydroid0 ALLOW FWD   Anywhere (v6)             
+
+---
+NEXT                             LEFT LAST                               PASSED UNIT                                 ACTIVATES
+Sat 2026-08-15 06:15:46 CST       25s Sat 2026-08-15 06:15:16 CST        4s ago omarchy-battery-monitor.timer        omarchy-battery-monitor.service
+Sat 2026-08-15 06:16:03 CST       42s Sat 2026-08-15 06:13:03 CST  2min 17s ago omarchy-services-battery.timer       omarchy-services-battery.service
+Sat 2026-08-15 06:16:09 CST       48s Sat 2026-08-15 06:15:09 CST       11s ago sonos-stream-watchdog.timer          sonos-stream-watchdog.service
+Sat 2026-08-15 06:17:03 CST  1min 42s Sat 2026-08-15 06:15:03 CST       17s ago power-profile-policy.timer           power-profile-policy.service
+Sat 2026-08-15 06:18:09 CST  2min 48s Sat 2026-08-15 06:08:09 CST      7min ago clash-secure-localhost.timer         clash-secure-localhost.service
+Sat 2026-08-15 06:21:49 CST      6min Sat 2026-08-15 06:06:49 CST      8min ago tasknotes-calendar-ics.timer         tasknotes-calendar-ics.service
+Sat 2026-08-15 06:30:00 CST     14min Fri 2026-08-14 06:30:09 CST       23h ago dashboard-resync.timer               dashboard-resync.service
+Sat 2026-08-15 06:45:01 CST     29min Sat 2026-08-15 06:15:01 CST       19s ago proxyfix.timer                       proxyfix.service
+Sat 2026-08-15 07:00:00 CST     44min Fri 2026-08-14 19:00:09 CST       11h ago aw510m-lights-schedule.timer         aw510m-lights-schedule.service
+Sat 2026-08-15 07:00:00 CST     44min Fri 2026-08-14 19:00:09 CST       11h ago kbd-backlight-schedule.timer         kbd-backlight-schedule.service
+Sat 2026-08-15 07:00:00 CST     44min Fri 2026-08-14 08:21:19 CST       21h ago veloplanner-trainingpeaks-sync.timer veloplanner-trainingpeaks-sync.service
+Sat 2026-08-15 08:30:00 CST  2h 14min Fri 2026-08-14 08:30:05 CST       21h ago security-scan@daily.timer            security-scan@daily.service
+Sun 2026-08-16 03:30:00 CST       21h Sat 2026-08-15 03:30:09 CST  2h 45min ago hyprsunset-flux-schedule.timer       hyprsunset-flux-schedule.service
+Sun 2026-08-16 06:00:00 CST       23h Sat 2026-08-15 06:00:00 CST     15min ago j4c1cz-sync.timer                    j4c1cz-sync.service
+Sun 2026-08-16 09:00:00 CST  1 day 2h Thu 2026-08-13 09:00:09 CST 1 day 21h ago omarchy-job@folder-sort.timer        omarchy-job@folder-sort.service
+Sun 2026-08-16 11:00:30 CST  1 day 4h Sun 2026-08-09 11:11:57 CST    4 days ago backup-thinkpad-to-mac.timer         backup-thinkpad-to-mac.service
+Sun 2026-08-16 20:00:00 CST 1 day 13h Sun 2026-08-09 20:14:00 CST    4 days ago omarchy-job@zen-links.timer          omarchy-job@zen-links.service
+Mon 2026-08-17 09:30:00 CST    2 days Mon 2026-08-10 10:30:24 CST    4 days ago security-scan@weekly.timer           security-scan@weekly.service
+Mon 2026-08-17 10:30:00 CST    2 days Mon 2026-08-10 10:30:24 CST    4 days ago security-scan@deep.timer             security-scan@deep.service
+
+19 timers listed.
+---
+aether
+alacritty
+alsa-tools
+alsa-utils
+arch-audit
+asdcontrol
+base
+base-devel
+bash-completion
+bat
+bitwarden
+blueman
+bluetui
+bluez-utils
+bolt
+brightnessctl
+btop
+btrfs-progs
+cava
+chromium
+clamav
+clang
+clash-verge-rev-bin
+claude-code
+claude-desktop-extra
+cliamp
+cliphist
+cmake
+cups
+cups-browsed
+cups-filters
+cups-pdf
+cursor-bin
+docker
+docker-buildx
+docker-compose
+dosfstools
+dotnet-runtime-9.0
+durdraw
+dust
+edk2-ovmf
+efibootmgr
+evince
+exfatprogs
+expac
+eza
+fastfetch
+fcitx5
+fcitx5-chinese-addons
+fcitx5-configtool
+fcitx5-gtk
+fcitx5-qt
+fd
+ffmpegthumbnailer
+figlet
+flatpak
+fontconfig
+fprintd
+freerdp
+fzf
+geeqie
+git
+github-cli
+glm
+gnome-calculator
+gnome-disk-utility
+gnome-keyring
+gnome-themes-extra
+gobject-introspection
+gphoto2
+gpu-screen-recorder
+grim
+gst-plugin-pipewire
+gum
+gvfs-afc
+gvfs-gphoto2
+gvfs-mtp
+gvfs-nfs
+gvfs-smb
+hypridle
+hyprland
+hyprland-guiutils
+hyprland-preview-share-picker
+hyprland-protocols
+hyprlock
+hyprmoncfg
+hyprpicker
+hyprsunset
+ifuse
+imagemagick
+impala
+imv
+inetutils
+intel-lpmd
+intel-media-driver
+intel-ucode
+inxi
+iwd
+jq
+kdeconnect
+kdenlive
+kernel-modules-hook
+keyd
+kitty
+kodi
+kvantum-qt5
+lazydocker
+lazygit
+less
+lib32-vulkan-intel
+libfprint-git
+libgphoto2
+libpulse
+libqalculate
+libreoffice-fresh
+libretro-beetle-pce
+libretro-beetle-pce-fast
+libretro-beetle-psx
+libretro-beetle-psx-hw
+libretro-beetle-supergrafx
+libretro-blastem
+libretro-bsnes
+libretro-bsnes-hd
+libretro-bsnes2014
+libretro-cap32-git
+libretro-database-git
+libretro-desmume
+libretro-dolphin
+libretro-fbneo-git
+libretro-flycast
+libretro-gambatte
+libretro-genesis-plus-gx
+libretro-kronos
+libretro-mame
+libretro-mame2016
+libretro-melonds
+libretro-mesen
+libretro-mesen-s
+libretro-mgba
+libretro-mupen64plus-next
+libretro-nestopia
+libretro-overlays
+libretro-parallel-n64
+libretro-picodrive
+libretro-play
+libretro-ppsspp
+libretro-sameboy
+libretro-scummvm
+libretro-shaders-slang
+libretro-snes9x
+libretro-uae-git
+libretro-vice-x128-git
+libretro-vice-x64-git
+libretro-vice-x64dtv-git
+libretro-vice-x64sc-git
+libretro-vice-xcbm2-git
+libretro-vice-xcbm5x0-git
+libretro-vice-xpet-git
+libretro-vice-xplus4-git
+libretro-vice-xscpu64-git
+libretro-vice-xvic-git
+libretro-yabause
+libyaml
+limine
+limine-mkinitcpio-hook
+limine-snapper-sync
+linux
+linux-firmware
+llvm
+lmstudio-bin
+localsend
+luarocks
+lynis
+mako
+man-db
+mariadb-libs
+mise
+mpv
+mupdf-tools
+nautilus
+nautilus-python
+neovim
+noto-fonts
+noto-fonts-cjk
+noto-fonts-emoji
+nss-mdns
+ntfs-3g
+obs-studio
+obsidian
+ollama
+omarchy-keyring
+omarchy-nvim
+omarchy-walker
+onnxruntime-cpu
+openbsd-netcat
+openxr
+orca-slicer
+pacman-contrib
+pamixer
+pinta
+pipewire
+pipewire-alsa
+pipewire-jack
+pipewire-pulse
+pipewire-zeroconf
+playerctl
+plocate
+plymouth
+polkit-gnome
+postgresql-libs
+power-profiles-daemon
+python-astral
+python-gobject
+python-pipx
+python-poetry-core
+python-terminaltexteffects
+qemu-system-x86
+qt5-wayland
+qt6-imageformats
+quickshell
+retroarch
+retroarch-assets-glui
+retroarch-assets-ozone
+retroarch-assets-xmb
+retroarch-joypad-autoconfig-git
+ripgrep
+ruby
+rust
+samba
+satty
+sddm
+signal-desktop
+slurp
+snapper
+socat
+sof-firmware
+spicetify-cli
+spotify-launcher
+sshfs
+stacher7
+starship
+steam
+sudo
+supabase-bin
+sushi
+swaybg
+swayosd
+syncthing
+system-config-printer
+tailscale
+tcpdump
+tesseract
+tesseract-data-eng
+thermald
+tinyxxd
+tldr
+tmux
+tobi-try
+tree-sitter-cli
+ttf-ia-writer
+ttf-jetbrains-mono-nerd
+ttf-nanum
+typora
+tzupdate
+ufw
+ufw-docker
+unzip
+usage
+usbmuxd
+usbutils
+uv
+uwsm
+virtiofsd
+vpl-gpu-rt
+vulkan-intel
+waybar
+wechat-bin
+whois
+wike
+wireless-regdb
+wiremix
+wireplumber
+wl-clipboard
+wlsunset
+woff2-font-awesome
+xdg-desktop-portal-gtk
+xdg-desktop-portal-hyprland
+xdg-terminal-exec
+xmlstarlet
+xournalpp
+yaru-icon-theme
+yay
+zellij
+zen-browser-bin
+zoxide
+zram-generator
+---
+clash-verge-rev-bin
+claude-desktop-extra
+durdraw
+hyprmoncfg
+libretro-bsnes2014
+libretro-mame2016
+orca-slicer
+python-cyclonedx-lib
+python-packageurl
+python-pip-api
+python-pip-requirements-parser
+python-py-serializable
+python-pytest-runner
+spicetify-cli
+stacher7
+supabase-bin
+ttf-nanum
+wechat-bin
+zen-browser-bin

@@ -1,0 +1,11 @@
+[Unit]
+Description=Ding when an AI tool notification needs auth/login
+After=graphical-session.target
+
+[Service]
+ExecStart=%h/.local/bin/notify-sound-bridge.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

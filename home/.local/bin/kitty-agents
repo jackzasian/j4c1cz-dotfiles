@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Launch Kitty on Zellij session "agents" (layout applied on first create).
+set -euo pipefail
+
+SESSION=agents
+LAYOUT=agents
+
+if zellij list-sessions 2>/dev/null | grep -Eiq "^${SESSION}([[:space:]]|\[)"; then
+  exec kitty --session none -e zellij attach "$SESSION"
+fi
+
+exec kitty --session none -e zellij --layout "$LAYOUT" attach --create "$SESSION"

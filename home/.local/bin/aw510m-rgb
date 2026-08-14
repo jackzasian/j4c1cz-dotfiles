@@ -1,0 +1,212 @@
+#!/usr/bin/env python3
+"""
+aw510m-rgb - simple CLI to set the RGB lighting color on the
+Alienware AW510M gaming mouse (USB VID 0461, PID 4E9E) on Linux.
+
+Talks directly to the mouse's vendor-specific hidraw interface
+(USB interface #2, usage page 0xFF00). No manufacturer software
+or extra Python packages required.
+
+Protocol reverse-engineered from:
+  https://github.com/kamma/alienware-mouse-aw510m-linux
+
+Usage:
+  aw510m-rgb red
+  aw510m-rgb "#ff8800"
+  aw510m-rgb 255,128,0 --brightness 80
+  aw510m-rgb off
+  aw510m-rgb --list-devices
+"""
+
+import argparse
+import glob
+import os
+import sys
+import time
+
+VENDOR_ID = 0x0461
+PRODUCT_ID = 0x4E9E
+HID_ID_MARKER = f"HID_ID=0003:{VENDOR_ID:08X}:{PRODUCT_ID:08X}"
+CONTROL_INTERFACE = "02"  # vendor-specific interface that accepts these packets
+
+NAMED_COLORS = {
+    "off": (0, 0, 0),
+    "black": (0, 0, 0),
+    "white": (255, 255, 255),
+    "red": (255, 0, 0),
+    "green": (0, 255, 0),
+    "blue": (0, 0, 255),
+    "yellow": (255, 255, 0),
+    "cyan": (0, 255, 255),
+    "magenta": (255, 0, 255),
+    "purple": (128, 0, 255),
+    "orange": (255, 128, 0),
+    "pink": (255, 20, 147),
+    "alienware": (0, 175, 255),
+}
+
+
+def find_hidraw_device():
+    """Locate the /dev/hidrawN node for the AW510M's control interface."""
+    candidates = []
+    for hidraw_path in glob.glob("/sys/class/hidraw/hidraw*"):
+        name = os.path.basename(hidraw_path)
+        uevent_path = os.path.join(hidraw_path, "device", "uevent")
+        try:
+            with open(uevent_path) as f:
+                uevent = f.read()
+        except OSError:
+            continue
+        if HID_ID_MARKER not in uevent:
+            continue
+
+        iface_num = None
+        try:
+            dev_real = os.path.realpath(os.path.join(hidraw_path, "device"))
+            iface_dir = os.path.dirname(dev_real)
+            with open(os.path.join(iface_dir, "bInterfaceNumber")) as f:
+                iface_num = f.read().strip()
+        except OSError:
+            pass
+
+        candidates.append((f"/dev/{name}", iface_num))
+
+    for path, iface_num in candidates:
+        if iface_num == CONTROL_INTERFACE:
+            return path, candidates
+
+    return None, candidates
+
+
+def pad64(data: bytes) -> bytes:
+    if len(data) > 64:
+        raise ValueError("packet longer than 64 bytes")
+    return data + bytes(64 - len(data))
+
+
+def build_color_packets(r: int, g: int, b: int, brightness: int):
+    """Build the 3-packet sequence that sets a static RGB color."""
+    brightness_byte = max(1, min(100, brightness))
+    p1 = pad64(bytes([0x40, 0x03, 0x01, 0x00, 0x01]))
+    p2 = pad64(bytes([0x40, 0x10, 0x0C, 0x00, 0x01, brightness_byte, 0x00, r, g, b]))
+    p3 = pad64(bytes([0x40, 0x60, 0x07, 0x00, 0x9E, 0x4E, 0x00, 0x01]))
+    return [p1, p2, p3]
+
+
+def send_packets(device_path: str, packets):
+    fd = os.open(device_path, os.O_WRONLY)
+    try:
+        delays = (0.05, 0.05, 0.075)
+        for i, packet in enumerate(packets):
+            os.write(fd, packet)
+            time.sleep(delays[i] if i < len(delays) else 0.05)
+    finally:
+        os.close(fd)
+
+
+def parse_color(value: str):
+    key = value.strip().lower()
+    if key in NAMED_COLORS:
+        return NAMED_COLORS[key]
+
+    if key.startswith("#"):
+        key = key[1:]
+    if len(key) == 6 and all(c in "0123456789abcdef" for c in key):
+        return tuple(int(key[i:i + 2], 16) for i in (0, 2, 4))
+
+    parts = value.replace(",", " ").split()
+    if len(parts) == 3:
+        try:
+            r, g, b = (int(p) for p in parts)
+            if all(0 <= v <= 255 for v in (r, g, b)):
+                return (r, g, b)
+        except ValueError:
+            pass
+
+    raise argparse.ArgumentTypeError(
+        f"invalid color '{value}' (use a name, #RRGGBB, or 'R,G,B')"
+    )
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="aw510m-rgb",
+        description="Set the RGB lighting color on an Alienware AW510M mouse.",
+    )
+    parser.add_argument(
+        "color",
+        nargs="?",
+        type=parse_color,
+        help=f"Color: a name ({', '.join(sorted(NAMED_COLORS))}), "
+        f"#RRGGBB, or 'R,G,B'",
+    )
+    parser.add_argument(
+        "--brightness",
+        type=int,
+        default=100,
+        metavar="1-100",
+        help="Brightness percent (default: 100)",
+    )
+    parser.add_argument(
+        "--device",
+        metavar="PATH",
+        help="hidraw device path (auto-detected by default)",
+    )
+    parser.add_argument(
+        "--list-devices",
+        action="store_true",
+        help="Show detected AW510M hidraw interfaces and exit",
+    )
+    args = parser.parse_args()
+
+    if args.list_devices:
+        control_path, all_candidates = find_hidraw_device()
+        if not all_candidates:
+            print("No Alienware AW510M (0461:4E9E) hidraw devices found.")
+            return 1
+        for path, iface in all_candidates:
+            marker = " <- control interface" if path == control_path else ""
+            print(f"{path}  interface={iface}{marker}")
+        return 0
+
+    if args.color is None:
+        parser.print_help()
+        return 1
+
+    device_path = args.device
+    if device_path is None:
+        device_path, candidates = find_hidraw_device()
+        if device_path is None:
+            print("error: could not find the AW510M control interface.", file=sys.stderr)
+            if candidates:
+                print("Found these hidraw nodes for the mouse instead:", file=sys.stderr)
+                for path, iface in candidates:
+                    print(f"  {path} (interface={iface})", file=sys.stderr)
+            else:
+                print("Is the mouse plugged in?", file=sys.stderr)
+            print("You can pass one explicitly with --device /dev/hidrawN", file=sys.stderr)
+            return 1
+
+    r, g, b = args.color
+    packets = build_color_packets(r, g, b, args.brightness)
+
+    try:
+        send_packets(device_path, packets)
+    except PermissionError:
+        print(f"error: no write permission on {device_path}.", file=sys.stderr)
+        print(
+            "Try: sudo aw510m-rgb ...  or add a udev rule granting your user "
+            "access to this device.",
+            file=sys.stderr,
+        )
+        return 1
+    except OSError as e:
+        print(f"error: failed to write to {device_path}: {e}", file=sys.stderr)
+        return 1
+
+    print(f"Set AW510M color to rgb({r}, {g}, {b}) at {args.brightness}% brightness.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

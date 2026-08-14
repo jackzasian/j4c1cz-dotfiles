@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# Hermes on Mac mini — debug helpers from ThinkPad over Tailscale MagicDNS.
+set -euo pipefail
+
+HOST="${HERMES_MAC_HOST:-macmini}"
+HERMES_REMOTE='unset PYTHONHOME PYTHONPATH; export PATH="$HOME/.local/bin:/opt/homebrew/bin:$PATH"'
+
+usage() {
+  cat <<'EOF'
+Usage: hermes-mac <cmd>
+
+  ssh           Interactive SSH to Mac mini
+  logs          Tail gateway.log
+  errors        Tail gateway.error.log
+  status        launchd + model config
+  restart       kickstart ai.hermes.gateway
+  model         Show / set default model
+                hermes-mac model
+                hermes-mac model moonshotai/kimi-k3
+  tui           Hermes TUI on Mac (if installed)
+  agent ...     Run Hermes agent commands on Mac
+                hermes-mac agent -p planner -z "Plan ..."
+  profile ...   Manage Mac Hermes profiles
+  kanban ...    Manage/dispatch the shared agent board
+  dashboard     Start Hermes dashboard on Mac
+EOF
+}
+
+remote() {
+  # shellcheck disable=SC2029
+  ssh "$HOST" "bash -lc $(printf '%q' "$HERMES_REMOTE; $*")"
+}
+
+remote_args() {
+  local command="$HERMES_REMOTE; exec \"\$HOME/.hermes/hermes-agent/venv/bin/hermes\""
+  local arg quoted
+  for arg in "$@"; do
+    printf -v quoted ' %q' "$arg"
+    command+="$quoted"
+  done
+  exec ssh "$HOST" "bash -lc $(printf '%q' "$command")"
+}
+
+cmd="${1:-status}"
+shift || true
+
+case "$cmd" in
+  -h|--help|help) usage ;;
+  # Force a TERM macOS understands when called from Kitty/Zellij (xterm-kitty).
+  ssh) exec env TERM="${HERMES_SSH_TERM:-xterm-256color}" ssh "$HOST" ;;
+  logs|log) exec env TERM="${HERMES_SSH_TERM:-xterm-256color}" ssh "$HOST" "bash -lc $(printf '%q' "$HERMES_REMOTE; exec tail -F ~/.hermes/logs/gateway.log")" ;;
+  errors|err|error) exec env TERM="${HERMES_SSH_TERM:-xterm-256color}" ssh "$HOST" "bash -lc $(printf '%q' "$HERMES_REMOTE; exec tail -F ~/.hermes/logs/gateway.error.log")" ;;
+  status)
+    remote 'echo === gateway ===; launchctl print gui/$(id -u)/ai.hermes.gateway 2>&1 | grep -E "state =|runs =|last exit|program ="; echo === model ===; ~/.hermes/hermes-agent/venv/bin/hermes config get model.default; ~/.hermes/hermes-agent/venv/bin/hermes config get model.provider; ~/.hermes/hermes-agent/venv/bin/hermes config get model.base_url'
+    ;;
+  restart)
+    remote 'launchctl kickstart -k gui/$(id -u)/ai.hermes.gateway; sleep 2; launchctl print gui/$(id -u)/ai.hermes.gateway 2>&1 | grep -E "state =|runs =|last exit"'
+    ;;
+  model)
+    if [[ $# -eq 0 ]]; then
+      remote '~/.hermes/hermes-agent/venv/bin/hermes config get model.default; ~/.hermes/hermes-agent/venv/bin/hermes config get model.provider'
+    else
+      m="$1"
+      remote "~/.hermes/hermes-agent/venv/bin/hermes config set model.provider openrouter; ~/.hermes/hermes-agent/venv/bin/hermes config set model.default $(printf '%q' "$m"); ~/.hermes/hermes-agent/venv/bin/hermes config set model.base_url https://openrouter.ai/api/v1; launchctl kickstart -k gui/\$(id -u)/ai.hermes.gateway; echo set \$m and restarted"
+    fi
+    ;;
+  tui)
+    remote 'cd ~/.hermes/hermes-agent && unset PYTHONHOME PYTHONPATH && exec ~/.hermes/hermes-agent/venv/bin/hermes'
+    ;;
+  agent)
+    remote_args "$@"
+    ;;
+  profile)
+    remote_args profile "$@"
+    ;;
+  kanban)
+    remote_args kanban "$@"
+    ;;
+  dashboard)
+    remote_args dashboard "$@"
+    ;;
+  *)
+    echo "Unknown command: $cmd" >&2
+    usage >&2
+    exit 1
+    ;;
+esac

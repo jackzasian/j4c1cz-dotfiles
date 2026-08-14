@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# Keep Tailscale MagicDNS reachable through Clash (life-dash / hermes / ollama).
+# Called from clash-secure-localhost after profile updates rewrite clash-verge.yaml.
+set -euo pipefail
+
+VERGE_YAML="${CLASH_VERGE_YAML:-$HOME/.local/share/io.github.clash-verge-rev.clash-verge-rev/clash-verge.yaml}"
+SOCK=/tmp/verge/verge-mihomo.sock
+
+[[ -f $VERGE_YAML ]] || exit 0
+
+python3 - "$VERGE_YAML" <<'PY'
+import sys
+from pathlib import Path
+
+p = Path(sys.argv[1])
+text = p.read_text(encoding="utf-8")
+changed = False
+
+# Top-level hosts map
+hosts_block = """hosts:
+  jacks-mac-mini: 100.66.141.126
+  jacks-mac-mini.tail54f997.ts.net: 100.66.141.126
+  thinkpad1: 100.81.159.105
+  thinkpad1.tail54f997.ts.net: 100.81.159.105
+  zhengzexis-macbook-air: 100.110.173.82
+"""
+if "jacks-mac-mini: 100.66.141.126" not in text:
+    if "unified-delay: true\n" in text:
+        text = text.replace("unified-delay: true\n", "unified-delay: true\n" + hosts_block, 1)
+        changed = True
+    elif "\nhosts:\n" not in text:
+        text = hosts_block + "\n" + text
+        changed = True
+
+# use-hosts
+if "use-hosts: false" in text:
+    text = text.replace("use-hosts: false", "use-hosts: true", 1)
+    changed = True
+if "use-system-hosts: false" in text:
+    text = text.replace("use-system-hosts: false", "use-system-hosts: true", 1)
+    changed = True
+
+# nameserver-policy for MagicDNS
+if "100.100.100.100" not in text and "nameserver-policy:" not in text.split("dns:", 1)[-1][:800]:
+    anchor = "  use-hosts: true\n  use-system-hosts: true\n"
+    nsp = anchor + """  nameserver-policy:
+    '+.ts.net':
+      - 100.100.100.100
+    'jacks-mac-mini':
+      - 100.100.100.100
+    'thinkpad1':
+      - 100.100.100.100
+    'zhengzexis-macbook-air':
+      - 100.100.100.100
+"""
+    if anchor in text:
+        text = text.replace(anchor, nsp, 1)
+        changed = True
+
+# fake-ip-filter entries
+for entry in ("'+.ts.net'", "'jacks-mac-mini'", "'thinkpad1'"):
+    if entry not in text and "fake-ip-filter:" in text:
+        text = text.replace(
+            "fake-ip-filter:\n    - '*.lan'\n    - '*.local'\n",
+            f"fake-ip-filter:\n    - '*.lan'\n    - '*.local'\n    - {entry}\n",
+            1,
+        )
+        changed = True
+
+# rules head
+rules = [
+    "DOMAIN-SUFFIX,ts.net,DIRECT",
+    "DOMAIN,jacks-mac-mini,DIRECT",
+    "DOMAIN,thinkpad1,DIRECT",
+    "DOMAIN,zhengzexis-macbook-air,DIRECT",
+    "IP-CIDR,100.64.0.0/10,DIRECT,no-resolve",
+]
+ridx = text.rfind("\nrules:\n")
+if ridx >= 0:
+    insert_at = ridx + len("\nrules:\n")
+    head = text[insert_at : insert_at + 180]
+    if "DOMAIN-SUFFIX,ts.net,DIRECT" not in head:
+        block = "".join(f"- {r}\n" for r in rules)
+        text = text[:insert_at] + block + text[insert_at:]
+        changed = True
+
+if changed:
+    p.write_text(text, encoding="utf-8")
+    print("patched", p)
+else:
+    print("ok", p)
+PY
+
+# Reload runtime if socket is up
+if [[ -S $SOCK ]]; then
+  curl -sfS --max-time 10 --unix-socket "$SOCK" -X PUT 'http://localhost/configs?force=true' \
+    -H 'Content-Type: application/json' \
+    -d "{\"path\":\"$VERGE_YAML\"}" >/dev/null || true
+fi
+
+# Desktop system-proxy ignore list (Zen/Chromium via GNOME proxy)
+if command -v gsettings >/dev/null 2>&1; then
+  gsettings set org.gnome.system.proxy ignore-hosts \
+    "['localhost', '127.0.0.1', '::1', '192.168.0.0/16', '10.0.0.0/8', '172.16.0.0/12', '100.64.0.0/10', '*.ts.net', 'jacks-mac-mini', 'thinkpad1', 'zhengzexis-macbook-air', '*.local', '*.strava.com', 'strava.com', 'www.strava.com']" \
+    2>/dev/null || true
+fi

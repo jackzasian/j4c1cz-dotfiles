@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+"""Control Alienware AW510M (0461:4e9e) RGB via AlienFX APIv7."""
+
+from __future__ import annotations
+
+import argparse
+import ctypes
+import sys
+import time
+
+VID = 0x0461
+PID = 0x4E9E
+LENGTH = 65
+# AW610M mapping uses lights 0 (body) and 1 (logo); cover a few extras.
+LIGHT_IDS = (0, 1, 2, 3)
+
+
+class hid_device_info(ctypes.Structure):
+    pass
+
+
+hid_device_info._fields_ = [
+    ("path", ctypes.c_char_p),
+    ("vendor_id", ctypes.c_ushort),
+    ("product_id", ctypes.c_ushort),
+    ("serial_number", ctypes.c_wchar_p),
+    ("release_number", ctypes.c_ushort),
+    ("manufacturer_string", ctypes.c_wchar_p),
+    ("product_string", ctypes.c_wchar_p),
+    ("usage_page", ctypes.c_ushort),
+    ("usage", ctypes.c_ushort),
+    ("interface_number", ctypes.c_int),
+    ("next", ctypes.POINTER(hid_device_info)),
+    ("bus_type", ctypes.c_int),
+]
+
+
+def load_hid():
+    lib = ctypes.CDLL("libhidapi-hidraw.so.0")
+    lib.hid_init.restype = ctypes.c_int
+    lib.hid_exit.restype = ctypes.c_int
+    lib.hid_enumerate.argtypes = [ctypes.c_ushort, ctypes.c_ushort]
+    lib.hid_enumerate.restype = ctypes.POINTER(hid_device_info)
+    lib.hid_free_enumeration.argtypes = [ctypes.POINTER(hid_device_info)]
+    lib.hid_open_path.argtypes = [ctypes.c_char_p]
+    lib.hid_open_path.restype = ctypes.c_void_p
+    lib.hid_close.argtypes = [ctypes.c_void_p]
+    lib.hid_write.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_size_t]
+    lib.hid_write.restype = ctypes.c_int
+    lib.hid_read_timeout.argtypes = [
+        ctypes.c_void_p,
+        ctypes.c_char_p,
+        ctypes.c_size_t,
+        ctypes.c_int,
+    ]
+    lib.hid_read_timeout.restype = ctypes.c_int
+    lib.hid_error.argtypes = [ctypes.c_void_p]
+    lib.hid_error.restype = ctypes.c_wchar_p
+    return lib
+
+
+def find_control_path(lib) -> bytes:
+    devs = lib.hid_enumerate(VID, PID)
+    if not devs:
+        raise RuntimeError("Alienware AW510M not found (0461:4e9e)")
+    paths: list[tuple[int, bytes]] = []
+    cur = devs
+    while cur:
+        d = cur.contents
+        paths.append((d.interface_number, d.path))
+        cur = d.next
+    lib.hid_free_enumeration(devs)
+    for iface, path in paths:
+        if iface == 2:
+            return path
+    return paths[-1][1]
+
+
+def color_packet(light_id: int, r: int, g: int, b: int, bright: int) -> bytes:
+    buf = bytearray(LENGTH)
+    buf[0] = 0
+    buf[1] = 0x40
+    buf[2] = 0x10
+    buf[3] = 0x0C
+    buf[4] = 0x00
+    buf[5] = 1  # static color
+    buf[6] = bright  # 0..100
+    buf[7] = light_id
+    buf[8] = r
+    buf[9] = g
+    buf[10] = b
+    return bytes(buf)
+
+
+def send(lib, dev, pkt: bytes) -> None:
+    n = lib.hid_write(dev, pkt, len(pkt))
+    if n < 0:
+        raise RuntimeError(f"hid_write failed: {lib.hid_error(dev)}")
+    out = ctypes.create_string_buffer(LENGTH)
+    lib.hid_read_timeout(dev, out, LENGTH, 300)
+
+
+def set_lights(r: int, g: int, b: int, bright: int) -> None:
+    lib = load_hid()
+    lib.hid_init()
+    try:
+        path = find_control_path(lib)
+        dev = lib.hid_open_path(path)
+        if not dev:
+            raise RuntimeError(
+                f"Cannot open {path!r}: {lib.hid_error(None)}. "
+                "Need root or a udev rule granting access."
+            )
+        try:
+            for lid in LIGHT_IDS:
+                send(lib, dev, color_packet(lid, r, g, b, bright))
+                time.sleep(0.03)
+        finally:
+            lib.hid_close(dev)
+    finally:
+        lib.hid_exit()
+
+
+def main() -> int:
+    p = argparse.ArgumentParser(description="Alienware AW510M RGB control")
+    p.add_argument(
+        "action",
+        choices=("off", "on", "set"),
+        help="off = lights off, on = white, set = custom RGB",
+    )
+    p.add_argument("r", nargs="?", type=int, default=0)
+    p.add_argument("g", nargs="?", type=int, default=0)
+    p.add_argument("b", nargs="?", type=int, default=0)
+    p.add_argument(
+        "--bright",
+        type=int,
+        default=None,
+        help="Brightness 0-100 (default: 0 for off, 100 otherwise)",
+    )
+    args = p.parse_args()
+
+    if args.action == "off":
+        set_lights(0, 0, 0, args.bright if args.bright is not None else 0)
+        print("AW510M lights off")
+    elif args.action == "on":
+        set_lights(255, 255, 255, args.bright if args.bright is not None else 100)
+        print("AW510M lights on (white)")
+    else:
+        for c in (args.r, args.g, args.b):
+            if not 0 <= c <= 255:
+                p.error("RGB values must be 0-255")
+        bright = args.bright if args.bright is not None else 100
+        set_lights(args.r, args.g, args.b, bright)
+        print(f"AW510M set to RGB({args.r},{args.g},{args.b}) bright={bright}")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except Exception as e:
+        print(f"error: {e}", file=sys.stderr)
+        raise SystemExit(1)

@@ -1,0 +1,13 @@
+[Unit]
+Description=Local Hermes status dashboard (offline Web UI)
+After=network-online.target
+
+[Service]
+ExecStart=%h/bin/hermes-dashboard-serve.sh
+Environment=HOME=%h
+Environment=HERMES_DASHBOARD_HOST=127.0.0.1
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

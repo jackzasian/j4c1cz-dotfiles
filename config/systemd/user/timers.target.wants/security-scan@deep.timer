@@ -1,0 +1,10 @@
+[Unit]
+Description=Bi-weekly deep security scan (even ISO weeks, guarded in script)
+
+[Timer]
+OnCalendar=Mon *-*-* 10:30:00
+OnBootSec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

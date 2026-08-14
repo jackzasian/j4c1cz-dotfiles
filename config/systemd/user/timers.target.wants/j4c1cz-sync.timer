@@ -1,0 +1,11 @@
+[Unit]
+Description=Obsidian → GitHub publish once daily at 06:00 (ThinkPad only)
+
+[Timer]
+OnCalendar=*-*-* 06:00:00
+Persistent=true
+AccuracySec=1min
+Unit=j4c1cz-sync.service
+
+[Install]
+WantedBy=timers.target

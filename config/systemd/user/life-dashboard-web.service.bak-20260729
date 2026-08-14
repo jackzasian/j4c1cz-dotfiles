@@ -1,0 +1,14 @@
+[Unit]
+Description=Life Dashboard web UI (activity streaks + status)
+After=network-online.target
+
+[Service]
+ExecStart=%h/Projects/life-dashboard/bin/life-dashboard-serve.sh
+Environment=HOME=%h
+Environment=LIFE_DASHBOARD_HOST=127.0.0.1
+Environment=LIFE_DASHBOARD_PORT=8780
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

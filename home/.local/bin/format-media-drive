@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -euo pipefail
+LOG=/home/jackz/.cursor/debug-ab6ea3.log
+log(){ printf '%s\n' "{\"sessionId\":\"ab6ea3\",\"runId\":\"format\",\"hypothesisId\":\"$1\",\"location\":\"$2\",\"message\":\"$3\",\"data\":$4,\"timestamp\":$(date +%s%3N)}" >>"$LOG"; }
+
+TARGET=""
+while read -r name tran type size; do
+  [[ "$tran" == "usb" && "$type" == "disk" ]] || continue
+  [[ "$size" -gt 500000000000 ]] || continue
+  model=$(lsblk -ndo MODEL "/dev/$name" 2>/dev/null || true)
+  echo "candidate /dev/$name model='$model' size=$size"
+  if [[ "$model" == *HS-SSD* || "$model" == *HIKSEMI* || "$model" == *CC300* ]]; then
+    TARGET="/dev/$name"
+    break
+  fi
+  # fallback: largest usb disk ~1TB
+  TARGET="/dev/$name"
+done < <(lsblk -nbdo NAME,TRAN,TYPE,SIZE)
+
+if [[ -z "$TARGET" || ! -b "$TARGET" ]]; then
+  echo "HIKSEMI drive not found. Unplug/replug, wait 5s, run again."
+  log B detect "drive not found" "{\"ok\":false}"
+  exit 1
+fi
+
+BASE=${TARGET#/dev/}
+STATE=$(cat /sys/block/$BASE/device/state 2>/dev/null || echo unknown)
+MODEL=$(lsblk -ndo MODEL "$TARGET")
+echo "Using $TARGET (state=$STATE, model=$MODEL)"
+log A detect "found drive" "{\"dev\":\"$TARGET\",\"state\":\"$STATE\",\"model\":\"$MODEL\"}"
+
+if findmnt "$TARGET" >/dev/null 2>&1 || findmnt "${TARGET}1" >/dev/null 2>&1; then
+  echo "Refusing: drive or partition is mounted — unmount first"
+  exit 1
+fi
+
+echo "Wiping and formatting $TARGET as ext4 label=Media (ALL DATA ON THIS DRIVE WILL BE ERASED)..."
+/usr/bin/sudo -n wipefs -a "$TARGET"
+/usr/bin/sudo -n parted -s "$TARGET" mklabel gpt mkpart primary ext4 1MiB 100%
+/usr/bin/sudo -n partprobe "$TARGET" || true
+sleep 2
+PART="${TARGET}1"
+for _ in $(seq 1 15); do [[ -b "$PART" ]] && break; sleep 1; done
+if [[ ! -b "$PART" ]]; then
+  echo "Partition $PART did not appear"
+  log C part "missing partition" "{\"part\":\"$PART\"}"
+  exit 1
+fi
+/usr/bin/sudo -n mkfs.ext4 -F -L Media -E lazy_itable_init=1,lazy_journal_init=1 "$PART"
+log C mkfs "formatted" "{\"part\":\"$PART\",\"label\":\"Media\"}"
+sleep 1
+OUT=$(udisksctl mount -b "$PART" 2>&1) || true
+echo "$OUT"
+MP=$(findmnt -n -o TARGET "$PART" || true)
+log D mount "mount result" "{\"mountpoint\":\"${MP:-}\",\"output\":\"$(echo "$OUT" | tr '\n' ' ' | sed 's/\"/\\\\\"/g')\"}"
+if [[ -n "$MP" ]]; then
+  /usr/bin/sudo -n chown jackz:jackz "$MP"
+  echo "Ready: $MP"
+  lsblk -o NAME,SIZE,FSTYPE,LABEL,MOUNTPOINTS "$TARGET"
+  exit 0
+fi
+echo "Formatted but auto-mount failed — open 'Media' in the file manager"
+exit 2

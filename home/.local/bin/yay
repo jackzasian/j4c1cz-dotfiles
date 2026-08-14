@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Route yay + child git through Clash HTTP proxy; avoid ALL_PROXY SOCKS (breaks AUR git).
+set -euo pipefail
+
+REAL_YAY=/usr/bin/yay
+PROXY_SH="${HOME}/.config/omarchy/proxy.sh"
+
+if [[ -f $PROXY_SH ]]; then
+  # shellcheck source=/dev/null
+  source "$PROXY_SH"
+  proxy_on >/dev/null 2>&1 || true
+fi
+
+unset ALL_PROXY all_proxy
+exec "$REAL_YAY" "$@"

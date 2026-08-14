@@ -1,0 +1,126 @@
+#!/bin/bash
+# Enable/disable ThinkPad LCD while docked to Studio Display.
+#
+# hyprmoncfg "desktop" keeps eDP enabled in monitors.conf.
+# This script writes/removes the Omarchy toggle (sourced after monitors.conf).
+# Super+Ctrl+Delete → toggle. While want=on, studio-dock-lights will not re-disable.
+
+set -euo pipefail
+
+TOGGLE="internal-monitor-disable"
+TOGGLE_FLAG="$HOME/.local/state/omarchy/toggles/hypr/$TOGGLE.conf"
+MIRROR_TOGGLE="internal-monitor-mirror"
+WANT_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/laptop-display-want"
+PANEL_DEV="intel_backlight"
+
+mkdir -p "$(dirname "$WANT_FILE")" "$(dirname "$TOGGLE_FLAG")"
+
+internal_desc() {
+  hyprctl monitors all -j 2>/dev/null | jq -r '
+    .[] | select(.name | test("eDP"; "i")) | .description
+  ' | head -n 1
+}
+
+panel_on() {
+  local level
+  level=$(grep -E '^panel=' "${XDG_CACHE_HOME:-$HOME/.cache}/studio-dock-lights/levels" 2>/dev/null \
+    | cut -d= -f2 || true)
+  [[ -n "${level:-}" && "$level" != "0" ]] || level=40
+  brightnessctl --device="$PANEL_DEV" set "$level" >/dev/null 2>&1 || true
+}
+
+write_disable_flag() {
+  local desc
+  desc=$(internal_desc)
+  if [[ -z "$desc" ]]; then
+    notify-send -u low "Laptop display: no laptop monitor found"
+    return 1
+  fi
+  cat >"$TOGGLE_FLAG" <<EOF
+monitorv2 {
+  output = desc:${desc}
+  disabled = true
+}
+EOF
+}
+
+enable() {
+  echo on >"$WANT_FILE"
+  rm -f "$TOGGLE_FLAG"
+  rm -f "$HOME/.local/state/omarchy/toggles/hypr/${MIRROR_TOGGLE}.conf"
+  hyprctl reload
+  sleep 0.4
+  rm -f "$TOGGLE_FLAG"
+  # Full panel power — dock scripts may have left backlight near 0
+  brightnessctl --device="$PANEL_DEV" set 100% >/dev/null 2>&1 || panel_on
+  hyprctl dispatch dpms on eDP-1 >/dev/null 2>&1 || true
+  # Place cursor on laptop (right of Studio in desktop profile) and focus it
+  hyprctl dispatch focusmonitor eDP-1 >/dev/null 2>&1 || true
+  hyprctl dispatch movecursor 3280 450 >/dev/null 2>&1 || true
+  notify-send -u critical "Laptop display ON" "Look at the ThinkPad lid screen (to the right of Studio in the layout). Super+Ctrl+Delete toggles."
+}
+
+disable() {
+  if ! omarchy-hw-external-monitors; then
+    notify-send -u low "Can't disable the only active display"
+    exit 1
+  fi
+  echo off >"$WANT_FILE"
+  write_disable_flag || exit 1
+  rm -f "$HOME/.local/state/omarchy/toggles/hypr/${MIRROR_TOGGLE}.conf"
+  brightnessctl --device="$PANEL_DEV" set 0 >/dev/null 2>&1 || true
+  hyprctl reload
+  sleep 0.4
+  # Re-assert after reload flaps from monitor-watch / dock scripts
+  write_disable_flag || true
+  if [[ ! -f "$TOGGLE_FLAG" ]]; then
+    notify-send -u critical "Laptop disable flag was cleared — retry Super+Ctrl+Delete"
+    exit 1
+  fi
+  if hyprctl monitors all -j 2>/dev/null | jq -e '
+    any(.[]; (.name | test("eDP"; "i")) and (.disabled != true))
+  ' >/dev/null 2>&1; then
+    hyprctl reload
+    sleep 0.3
+    write_disable_flag || true
+  fi
+  notify-send -u low "Laptop display disabled"
+}
+
+recover() {
+  # Only when truly undocked. Never clear an intentional disable while an
+  # external monitor is still connected (Studio Display).
+  if omarchy-hw-external-monitors; then
+    return 0
+  fi
+  rm -f "$WANT_FILE"
+  if [[ -f "$TOGGLE_FLAG" ]]; then
+    rm -f "$TOGGLE_FLAG"
+    hyprctl reload
+  fi
+}
+
+is_disabled() {
+  [[ -f "$TOGGLE_FLAG" ]] && return 0
+  hyprctl monitors all -j 2>/dev/null | jq -e '
+    any(.[]; (.name | test("eDP"; "i")) and (.disabled == true))
+  ' >/dev/null 2>&1
+}
+
+case "${1:-}" in
+  on) enable ;;
+  off) disable ;;
+  toggle)
+    if is_disabled; then enable; else disable; fi
+    ;;
+  recover) recover ;;
+  status)
+    if is_disabled; then echo "laptop=off"; else echo "laptop=on"; fi
+    echo "want=$(cat "$WANT_FILE" 2>/dev/null || echo auto)"
+    echo "toggle_file=$([[ -f $TOGGLE_FLAG ]] && echo yes || echo no)"
+    ;;
+  *)
+    echo "Usage: $(basename "$0") {on|off|toggle|recover|status}" >&2
+    exit 1
+    ;;
+esac

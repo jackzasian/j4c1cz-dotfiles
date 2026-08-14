@@ -1,0 +1,11 @@
+[Unit]
+Description=folder-sort every 3 days (AC only)
+ConditionACPower=true
+
+[Timer]
+OnCalendar=*-*-1/3 09:00:00
+Persistent=true
+OnBootSec=15min
+
+[Install]
+WantedBy=timers.target

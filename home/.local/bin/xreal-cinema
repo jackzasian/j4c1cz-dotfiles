@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# Main XREAL cinema app — travel mode on launch, laptop panel off, GUI menu.
+set -euo pipefail
+
+# shellcheck source=/dev/null
+source "${HOME}/.local/lib/xreal/common.sh"
+
+show_error() {
+  zenity --error --title="XREAL Cinema" --text="$1" 2>/dev/null \
+    || notify-send -a xreal "XREAL Cinema" "$1" 2>/dev/null \
+    || echo "$1" >&2
+}
+
+cmd_launch() {
+  local mon choice
+  mon=$(xreal_find_monitor || true)
+  if [[ -z $mon ]]; then
+    show_error "No XREAL glasses detected.\n\nPlug in via USB-C, wait a few seconds, then open XREAL Cinema again."
+    exit 1
+  fi
+
+  xreal_travel_maybe_on
+  xreal_sync_window_rules
+  xreal_apply_display
+  xreal_focus_glasses "$mon"
+
+  choice=$(zenity --list \
+    --title="XREAL Cinema" \
+    --text="Glasses: ${mon}\nLaptop off · top bar hidden · full 1080p" \
+    --column="Action" --column="Description" \
+    "library" "Play from ~/Videos library" \
+    "browse" "Browse for any video file" \
+    "kodi" "Kodi — Netflix-style UI" \
+    "steam" "Steam Big Picture" \
+    "exit" "End session — restore laptop display" \
+    --width=460 --height=340 2>/dev/null) || exit 0
+
+  case $choice in
+    library)
+      exec xreal-library --app
+      ;;
+    browse)
+      exec xreal-library --app --browse
+      ;;
+    kodi)
+      exec xreal-kodi
+      ;;
+    steam)
+      exec xreal-steam
+      ;;
+    exit)
+      xreal-travel off
+      xreal_notify "XREAL Cinema" "Session ended — laptop display restored"
+      ;;
+    *)
+      exit 0
+      ;;
+  esac
+}
+
+usage() {
+  cat <<'EOF'
+Usage: xreal-cinema
+
+Launch the XREAL Cinema app from your app menu.
+Disables the laptop panel and opens a picker menu for offline viewing.
+EOF
+}
+
+main() {
+  case ${1:-} in
+    -h|--help|help) usage ;;
+    "" ) cmd_launch ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"

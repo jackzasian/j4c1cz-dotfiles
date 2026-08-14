@@ -1,0 +1,6 @@
+[Unit]
+Description=Publish TaskNotes calendar.ics to GitHub gist
+
+[Service]
+Type=oneshot
+ExecStart=%h/.hermes/scripts/publish-calendar-ics.sh

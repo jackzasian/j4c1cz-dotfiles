@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily TrainingPeaks -> VeloPlanner sync
+
+[Timer]
+OnCalendar=*-*-* 07:00:00
+OnBootSec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

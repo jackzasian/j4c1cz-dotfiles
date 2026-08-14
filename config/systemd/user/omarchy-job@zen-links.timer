@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly Zen → Obsidian Links sync (AC only)
+ConditionACPower=true
+
+[Timer]
+OnCalendar=Sun *-*-* 20:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

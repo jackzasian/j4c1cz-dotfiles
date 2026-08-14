@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly Links GitHub push (AC only)
+ConditionACPower=true
+
+[Timer]
+OnCalendar=Sun *-*-* 20:15:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,2 +1,1 @@
-#!/bin/bash
-exec "$HOME/Developer/Proxyfix/proxyfix" "$@"
+/home/jackz/Developer/Proxyfix/proxyfix

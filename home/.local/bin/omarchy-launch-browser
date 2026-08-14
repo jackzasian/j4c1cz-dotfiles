@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Override stock omarchy-launch-browser — Zen + Clash PAC (Strava direct).
+exec "${HOME}/.local/bin/browser-launch" "$@"

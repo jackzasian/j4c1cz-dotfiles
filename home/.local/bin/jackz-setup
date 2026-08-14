@@ -1,0 +1,204 @@
+#!/usr/bin/env bash
+# jackz-setup — personal Omarchy config CLI
+
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export JACKZ_SETUP_HOME="${JACKZ_SETUP_HOME:-$ROOT}"
+export JACKZ_SETUP_LIB="${JACKZ_SETUP_LIB:-${HOME}/.local/lib/jackz-setup}"
+
+# shellcheck disable=SC1091
+source "${JACKZ_SETUP_LIB}/common.sh" 2>/dev/null || source "${JACKZ_SETUP_HOME}/lib/common.sh"
+
+js_help() {
+  cat <<'EOF'
+jackz-setup — Omarchy personal config CLI
+
+Usage:
+  jackz-setup                    interactive fzf menu (↑↓ move, ← back)
+  jackz-setup help
+
+Core:
+  quick, fix-all, monitor, battery, sunset, syncthing, fan, power, kbd, xreal
+
+Daily (Hermes high priority):
+  quick status          daily dashboard
+  fix-all               proxy + folder-sort + network
+  proxy-apps add        register new app for Clash fake-ip fix
+  dotfiles push         sync config + push to GitHub
+  apps obsidian|wechat  launch/focus apps
+  quit window|cursor    close windows / stop processes
+  audio switch          cycle BT / speakers
+  cleanup apply         folder-sort
+  lan audit             Syncthing/Clash/UFW check
+  theme-sync            Omarchy → Cursor colors
+
+Extended:
+  clash, wifi, bt, health, hypr-toggles, theme, services, obsidian
+  pacman, timers, security
+
+Examples:
+  jackz-setup battery 80
+  jackz-setup clash status
+  jackz-setup security check
+  jackz-setup wifi connect
+  jackz-setup theme bg next
+
+Run 'jackz-setup <group> help' for group details.
+Repo: ~/Developer/jackz-setup
+EOF
+}
+
+js_load() {
+  js_source_module "$1"
+}
+
+js_dispatch() {
+  local cmd="${1:-menu}"
+  shift || true
+
+  case "$cmd" in
+    help|-h|--help)
+      js_help
+      ;;
+    fix-all|fixall|daily)
+      js_load quick
+      js_quick_cmd fix-all "$@"
+      ;;
+    quick|q)
+      js_load quick
+      js_quick_cmd "$@"
+      ;;
+    theme-sync|sync-theme)
+      js_load quick
+      js_quick_cmd theme-sync "$@"
+      ;;
+    proxy-apps|proxy-app|proxyapp)
+      js_load proxy-apps
+      js_proxy_apps_cmd "$@"
+      ;;
+    dotfiles|dots|github)
+      js_load dotfiles
+      js_dotfiles_cmd "$@"
+      ;;
+    menu|tui)
+      js_load menu
+      js_menu_cmd
+      ;;
+    audio|sound)
+      js_load audio
+      js_audio_cmd "$@"
+      ;;
+    cleanup|sort|files)
+      js_load cleanup
+      js_cleanup_cmd "$@"
+      ;;
+    apps|app|launch)
+      js_load apps
+      js_apps_cmd "$@"
+      ;;
+    quit|kill|close|stop)
+      js_load quit
+      js_quit_cmd "$@"
+      ;;
+    lan|ufw)
+      js_load lan
+      js_lan_cmd "$@"
+      ;;
+    monitor|mon|display)
+      js_load monitor
+      js_monitor_cmd "$@"
+      ;;
+    battery|bat)
+      js_load battery
+      js_battery_cmd "$@"
+      ;;
+    sunset|night|nightlight|flux)
+      js_load sunset
+      js_sunset_cmd "$@"
+      ;;
+    syncthing|sync|st)
+      js_load syncthing
+      js_syncthing_cmd "$@"
+      ;;
+    fan|cooling)
+      js_load fan
+      js_fan_cmd "$@"
+      ;;
+    clash|proxy)
+      case "${1:-status}" in
+        fix|test|status|on|off|dashboard|groups|select|help|-h|--help)
+          js_load clash
+          js_clash_cmd "$@"
+          ;;
+        *)
+          js_load extras
+          js_extras_cmd proxy "$@"
+          ;;
+      esac
+      ;;
+    wifi|network)
+      js_load network
+      js_network_cmd wifi "$@"
+      ;;
+    bt|bluetooth)
+      js_load network
+      js_network_cmd bt "$@"
+      ;;
+    health)
+      js_load health
+      js_health_cmd "$@"
+      ;;
+    hypr-toggles|toggles|toggle)
+      js_load hypr-toggles
+      js_hypr_toggle_cmd "$@"
+      ;;
+    theme)
+      js_load theme
+      js_theme_cmd "$@"
+      ;;
+    services|svc)
+      js_load services
+      js_services_cmd "$@"
+      ;;
+    obsidian|vault)
+      js_load obsidian
+      js_obsidian_cmd "$@"
+      ;;
+    pacman|pkg|updates)
+      js_load pacman
+      js_pacman_cmd "$@"
+      ;;
+    timers|timer)
+      js_load timers
+      js_timers_cmd "$@"
+      ;;
+    security|sec|audit)
+      js_load security
+      js_security_cmd "$@"
+      ;;
+    power|profile)
+      js_load extras
+      js_extras_cmd power "$@"
+      ;;
+    kbd|keyboard)
+      js_load extras
+      js_extras_cmd kbd "$@"
+      ;;
+    xreal|xr)
+      js_load extras
+      js_extras_cmd xreal "$@"
+      ;;
+    hypr)
+      js_load extras
+      js_extras_cmd hypr "$@"
+      ;;
+    *)
+      js_die "unknown command: ${cmd} (run: jackz-setup help)"
+      ;;
+  esac
+}
+
+if [[ ${BASH_SOURCE[0]} == "${0}" ]]; then
+  js_dispatch "$@"
+fi

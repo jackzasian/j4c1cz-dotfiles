@@ -1,0 +1,12 @@
+[Unit]
+Description=Sync today's TrainingPeaks workout into VeloPlanner
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/jackz/Developer/Veloplanner/scripts/sync-trainingpeaks.sh
+Environment=HOME=%h
+Environment=PATH=/home/jackz/.local/share/mise/installs/node/26.1.0/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

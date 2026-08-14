@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Pick a project under ~/Developer or ~/Projects, then start a subscription agent.
+set -euo pipefail
+BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$BIN_DIR/agent-lib.sh"
+
+which_agent="${1:-}"
+dir=""
+
+if [[ -n "${2:-}" ]]; then
+  dir="$(agent_resolve_dir "$2")" || exit 1
+elif [[ -n "$which_agent" && -d "$which_agent" ]]; then
+  dir="$(agent_resolve_dir "$which_agent")" || exit 1
+  which_agent=""
+else
+  dir="$(agent_pick_project)" || exit 1
+  [[ -n "$dir" ]] || exit 1
+fi
+
+agent_refuse_home "$dir" || exit 1
+
+if [[ -z "$which_agent" ]]; then
+  if command -v fzf >/dev/null 2>&1; then
+    which_agent="$(printf '%s\n' cursor opencode claude | fzf --prompt='agent> ' --height=20% --reverse)" || exit 1
+  else
+    echo "usage: agent-project [cursor|opencode|claude] [dir]" >&2
+    exit 1
+  fi
+fi
+
+case "$which_agent" in
+  cursor|agent) exec agent-here "$dir" ;;
+  opencode|oc)  exec opencode-here "$dir" ;;
+  claude|cc)    exec claude-here "$dir" ;;
+  *)
+    echo "usage: agent-project [cursor|opencode|claude] [dir]" >&2
+    exit 1
+    ;;
+esac

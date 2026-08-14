@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# omarchy:summary=Stop Persona-Quickshell and restore Omarchy wallpaper (undo trial)
+set -euo pipefail
+
+PERSONA_DIR="${HOME}/.config/quickshell/persona"
+TOGGLE="${HOME}/.local/state/omarchy/toggles/persona-quickshell-on"
+AUTOSTART="${HOME}/.config/hypr/autostart.conf"
+BINDINGS="${HOME}/.config/hypr/bindings.conf"
+BEGIN="# >>> persona-quickshell trial"
+END="# <<< persona-quickshell trial"
+LAST_BACKUP="${HOME}/.local/share/persona-quickshell-trial/last-backup"
+
+rm -f "${TOGGLE}"
+
+pkill -f "qs -c ${PERSONA_DIR}" 2>/dev/null || true
+pkill -x qs 2>/dev/null || true
+
+strip_block() {
+  local file="$1"
+  [[ -f "${file}" ]] || return 0
+  python3 - "${file}" "${BEGIN}" "${END}" <<'PY'
+import pathlib, sys
+path = pathlib.Path(sys.argv[1])
+begin, end = sys.argv[2], sys.argv[3]
+lines = path.read_text().splitlines(keepends=True)
+out, skip = [], False
+for line in lines:
+    if begin in line:
+        skip = True
+        continue
+    if end in line:
+        skip = False
+        continue
+    if not skip:
+        out.append(line)
+path.write_text("".join(out))
+PY
+}
+
+strip_block "${AUTOSTART}"
+strip_block "${BINDINGS}"
+
+if [[ -f "${LAST_BACKUP}" ]]; then
+  backup_dir="$(cat "${LAST_BACKUP}")"
+  if [[ -d "${backup_dir}" ]]; then
+    echo "Backup kept at ${backup_dir} (configs already stripped; restore manually if needed)"
+  fi
+fi
+
+pkill -x swaybg 2>/dev/null || true
+if [[ -f "${HOME}/.config/omarchy/current/background" ]]; then
+  uwsm-app -- swaybg -i "${HOME}/.config/omarchy/current/background" -m fill &
+fi
+
+hyprctl reload 2>/dev/null || true
+
+echo "Reverted: Persona stopped, Omarchy swaybg restored."
+echo "Packages and ${PERSONA_DIR} are still installed — remove with:"
+echo "  rm -rf ${PERSONA_DIR}"
+echo "  sudo pacman -Rns quickshell cava   # optional"

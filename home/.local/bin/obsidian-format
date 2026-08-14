@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# Reformat a pasted note into clean, structured markdown using a local
+# Ollama model — no opencode agent loop, just a direct chat call.
+# (opencode's tool-calling harness against local Ollama models was tested
+# and found unreliable/slow on this machine — see obsidian-ai for the
+# agentic/file-editing path instead, which is opt-in and AC-only.)
+#
+# Usage:
+#   obsidian-format                 # reads clipboard, prints + copies result
+#   obsidian-format "raw text..."   # reformat an arg
+#   pbpaste | obsidian-format       # reads stdin if piped
+#
+# Model tier follows power state: small/fast on battery, bigger on AC.
+set -euo pipefail
+
+PROMPT_FILE="/home/jackz/Obsidian/J4c1c/_meta/opencode/note-formatter-prompt.md"
+
+ac_online=1
+if [[ -r /sys/class/power_supply/AC/online ]]; then
+  ac_online="$(cat /sys/class/power_supply/AC/online)"
+elif [[ -r /sys/class/power_supply/ACAD/online ]]; then
+  ac_online="$(cat /sys/class/power_supply/ACAD/online)"
+fi
+
+if [[ "$ac_online" == "1" ]]; then
+  model="qwen2.5:7b-instruct"
+else
+  model="qwen2.5:3b-instruct"
+fi
+
+if [[ $# -gt 0 ]]; then
+  input="$*"
+elif [[ ! -t 0 ]]; then
+  input="$(cat)"
+else
+  input="$(wl-paste 2>/dev/null || true)"
+fi
+
+if [[ -z "${input// /}" ]]; then
+  echo "obsidian-format: no input (clipboard empty and no stdin/arg given)" >&2
+  exit 1
+fi
+
+system_prompt="$(cat "$PROMPT_FILE")"
+
+echo "obsidian-format: on $( [[ "$ac_online" == "1" ]] && echo AC || echo battery ), using $model" >&2
+
+result="$(jq -n \
+  --arg model "$model" \
+  --arg sys "$system_prompt" \
+  --arg user "$input" \
+  '{model: $model, stream: false, messages: [{role: "system", content: $sys}, {role: "user", content: $user}]}' \
+  | curl -s http://localhost:11434/api/chat -d @- \
+  | jq -r '.message.content')"
+
+echo "$result"
+
+if command -v wl-copy >/dev/null 2>&1; then
+  printf '%s' "$result" | wl-copy
+  echo "obsidian-format: result copied to clipboard" >&2
+fi

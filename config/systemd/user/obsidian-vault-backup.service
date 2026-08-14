@@ -1,0 +1,8 @@
+[Unit]
+Description=Backup Obsidian vault to GitHub
+
+[Service]
+Type=oneshot
+Environment=http_proxy=http://127.0.0.1:7897
+Environment=https_proxy=http://127.0.0.1:7897
+ExecStart=%h/.local/bin/obsidian-vault-backup

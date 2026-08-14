@@ -1,0 +1,21 @@
+[Unit]
+Description=Automated security scan (%i tier)
+# Only one security-scan unit at a time (templates can't Conflicts each other easily;
+# global flock in the script is the hard guarantee).
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/security-scan %i
+Environment=HOME=%h
+Environment=PATH=%h/.local/bin:%h/.local/share/mise/shims:/usr/local/bin:/usr/bin:/bin
+Environment=NO_OPEN_BROWSER=1
+Environment=OPENCODE_BIN=%h/.local/bin/opencode
+# Do not inherit a graphical session context for agent children
+UnsetEnvironment=DISPLAY WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE
+TimeoutStartSec=1h
+# Lower UI/session impact
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

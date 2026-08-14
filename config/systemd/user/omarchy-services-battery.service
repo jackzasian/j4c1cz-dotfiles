@@ -1,0 +1,9 @@
+[Unit]
+Description=Throttle omarchy-services dashboards on battery
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/jackz/Developer/omarchy-services
+EnvironmentFile=-/home/jackz/Developer/omarchy-services/.env
+ExecStart=/home/jackz/Developer/omarchy-services/scripts/battery-policy.sh

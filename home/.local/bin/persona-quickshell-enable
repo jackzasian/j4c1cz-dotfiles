@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# omarchy:summary=Persist Persona-Quickshell across Hyprland reloads (backs up configs)
+set -euo pipefail
+
+PERSONA_DIR="${HOME}/.config/quickshell/persona"
+BACKUP_DIR="${HOME}/.local/share/persona-quickshell-trial/backup-$(date +%Y%m%d-%H%M%S)"
+AUTOSTART="${HOME}/.config/hypr/autostart.conf"
+BINDINGS="${HOME}/.config/hypr/bindings.conf"
+BEGIN="# >>> persona-quickshell trial"
+END="# <<< persona-quickshell trial"
+
+"${HOME}/.local/bin/persona-quickshell-try"
+
+mkdir -p "${BACKUP_DIR}"
+cp -a "${AUTOSTART}" "${BACKUP_DIR}/autostart.conf"
+cp -a "${BINDINGS}" "${BACKUP_DIR}/bindings.conf"
+echo "${BACKUP_DIR}" > "${HOME}/.local/share/persona-quickshell-trial/last-backup"
+
+add_block() {
+  local file="$1" block="$2"
+  if grep -qF "${BEGIN}" "${file}" 2>/dev/null; then
+    return 0
+  fi
+  printf '\n%s\n%s\n%s\n' "${BEGIN}" "${block}" "${END}" >> "${file}"
+}
+
+add_block "${AUTOSTART}" "$(cat <<EOF
+exec-once = omarchy-toggle-enabled persona-quickshell-on && pkill -x swaybg
+exec-once = omarchy-toggle-enabled persona-quickshell-on && uwsm-app -- qs -c ${PERSONA_DIR}
+EOF
+)"
+
+add_block "${BINDINGS}" 'bindd = SUPER, R, Persona app search, exec, qs -c ~/.config/quickshell/persona ipc call searchapp toggle'
+
+hyprctl reload
+hyprctl configerrors
+
+echo "Enabled for future sessions. Backup: ${BACKUP_DIR}"
+echo "Revert anytime: persona-quickshell-revert"

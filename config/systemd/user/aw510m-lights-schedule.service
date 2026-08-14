@@ -1,0 +1,6 @@
+[Unit]
+Description=Apply Alienware AW510M RGB day/night schedule
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/aw510m-lights-schedule apply

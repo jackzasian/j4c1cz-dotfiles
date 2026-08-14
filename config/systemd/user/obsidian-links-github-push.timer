@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly push of Obsidian Links/ to private GitHub vault
+
+[Timer]
+# After Zen sync (Sun 20:00) — give sync a few minutes
+OnCalendar=Sun *-*-* 20:15:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

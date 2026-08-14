@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Watch Hyprland monitor events; apply studio-dock-lights on Studio Display plug/unplug.
+set -euo pipefail
+
+SOCKET="${XDG_RUNTIME_DIR}/hypr/${HYPRLAND_INSTANCE_SIGNATURE}/.socket2.sock"
+LIGHTS="${HOME}/.local/bin/studio-dock-lights"
+
+[[ -x "$LIGHTS" ]] || LIGHTS="$(command -v studio-dock-lights)"
+
+# Initial sync at start
+"$LIGHTS" auto || true
+
+if [[ ! -S "$SOCKET" ]]; then
+  echo "studio-dock-watch: no hyprland socket at $SOCKET" >&2
+  exit 1
+fi
+
+socat -U - "UNIX-CONNECT:${SOCKET}" | while read -r event; do
+  case "$event" in
+    monitoradded\>\>*|monitoraddedv2\>\>*|monitorremoved\>\>*|monitorremovedv2\>\>*)
+      # Debounce brief reconfigure flaps
+      sleep 0.8
+      "$LIGHTS" auto || true
+      ;;
+  esac
+done

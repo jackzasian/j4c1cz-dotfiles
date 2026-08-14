@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+# Optional: auto-enable XREAL cinema/travel mode when glasses or DP display connect.
+set -euo pipefail
+
+# shellcheck source=/dev/null
+source "${HOME}/.local/lib/xreal/common.sh"
+
+STATE_FILE="$(xreal_state_dir)/watch.state"
+POLL_SECONDS="${XREAL_WATCH_POLL_SECONDS:-2}"
+
+read_watch_state() {
+  local key=$1 default=${2:-}
+  if [[ -f $STATE_FILE ]]; then
+    local val
+    val=$(grep -E "^${key}=" "$STATE_FILE" 2>/dev/null | tail -1 | cut -d= -f2- || true)
+    if [[ -n $val ]]; then
+      printf '%s\n' "$val"
+      return 0
+    fi
+  fi
+  printf '%s\n' "$default"
+}
+
+write_watch_state() {
+  mkdir -p "$(xreal_state_dir)"
+  cat >"$STATE_FILE" <<EOF
+connected=${1:-0}
+monitor=${2:-}
+EOF
+}
+
+handle_connected() {
+  local mon=$1
+  if [[ $(read_watch_state connected 0) == "1" && $(read_watch_state monitor "") == "$mon" ]]; then
+    return 0
+  fi
+
+  write_watch_state 1 "$mon"
+  sleep 1
+
+  if [[ "${XREAL_AUTO_TRAVEL:-1}" == "1" ]]; then
+    XREAL_QUIET=1 xreal-travel on >/dev/null 2>&1 || true
+  fi
+
+  xreal_apply_display
+  xreal_sync_window_rules
+  xreal_focus_glasses "$mon"
+  xreal_notify "XREAL" "Glasses connected · cinema mode on ${mon}"
+}
+
+handle_disconnected() {
+  if [[ $(read_watch_state connected 0) != "1" ]]; then
+    write_watch_state 0 ""
+    return 0
+  fi
+
+  write_watch_state 0 ""
+  if [[ -f "$(xreal_state_dir)/travel.state" ]]; then
+    xreal-travel off >/dev/null 2>&1 || true
+  fi
+  xreal_notify "XREAL" "Glasses disconnected · displays restored"
+}
+
+usage() {
+  cat <<'EOF'
+Usage: xreal-monitor-watch
+
+Polls for XREAL / DP glasses and optionally starts cinema mode on connect.
+
+Disabled by default. Enable in ~/.config/xreal/config:
+  auto_connect=1
+
+Or run once with:
+  XREAL_AUTO_CONNECT=1 xreal-monitor-watch
+
+Start cinema manually instead:
+  xreal-cinema
+  jackz-setup xreal cinema
+EOF
+}
+
+main() {
+  case "${1:-}" in
+    -h|--help|help)
+      usage
+      exit 0
+      ;;
+  esac
+
+  if ! xreal_auto_connect_enabled; then
+    exit 0
+  fi
+
+  mkdir -p "$(xreal_state_dir)"
+  local mon last_mon=""
+  last_mon=$(read_watch_state monitor "")
+
+  while true; do
+    if ! hyprctl monitors -j >/dev/null 2>&1; then
+      sleep "$POLL_SECONDS"
+      continue
+    fi
+
+    mon=$(xreal_find_monitor || true)
+    if [[ -n $mon ]]; then
+      handle_connected "$mon"
+    else
+      if [[ -n $last_mon || $(read_watch_state connected 0) == "1" ]]; then
+        handle_disconnected
+      fi
+      last_mon=""
+    fi
+
+    if [[ -n $mon ]]; then
+      last_mon=$mon
+    fi
+
+    sleep "$POLL_SECONDS"
+  done
+}
+
+main "$@"

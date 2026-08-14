@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+VIDEO_DIR="$HOME/Videos/yt-offline"
+cd "$VIDEO_DIR"
+
+echo "=== Trip Mode: Video Player ==="
+echo ""
+ls -1 *.mp4 2>/dev/null | nl -w2 -s'. '
+echo ""
+echo -n "Pick a number, 'all' to play everything, or type name: "
+read -r choice
+
+if [[ "$choice" == "all" ]]; then
+    exec mpv *.mp4
+elif [[ "$choice" =~ ^[0-9]+$ ]]; then
+    file=$(ls -1 *.mp4 | sed -n "${choice}p")
+    if [[ -n "$file" ]]; then
+        exec mpv "$file"
+    else
+        echo "Invalid number."; sleep 2
+    fi
+elif [[ -f "$choice" ]]; then
+    exec mpv "$choice"
+elif [[ -f "$choice.mp4" ]]; then
+    exec mpv "$choice.mp4"
+else
+    echo "Not found."; sleep 2
+fi

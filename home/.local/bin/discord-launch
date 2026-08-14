@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Launch Discord as a Chromium web app (isolated profile + Clash proxy).
+set -euo pipefail
+
+DISCORD_URL="https://discord.com/channels/@me"
+WINDOW_PATTERN="discord.com"
+LAUNCH="uwsm-app -- /home/jackz/.local/bin/chromium-launch-webapp ${DISCORD_URL} discord"
+
+exec omarchy-launch-or-focus "$WINDOW_PATTERN" "$LAUNCH"

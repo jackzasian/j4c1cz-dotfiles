@@ -1,0 +1,12 @@
+[Unit]
+Description=Weekly ThinkPad important backup to Mac Mini Encrypted
+After=network-online.target
+Wants=network-online.target
+ConditionACPower=true
+
+[Service]
+Type=oneshot
+ExecStart=%h/bin/backup-thinkpad-to-mac all
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

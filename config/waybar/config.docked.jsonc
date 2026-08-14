@@ -1,0 +1,335 @@
+[
+  {
+    "name": "external",
+    "output": ["DP-1"],
+    "reload_style_on_change": true,
+    "layer": "top",
+    "position": "top",
+    "spacing": 4,
+    "height": 32,
+    "modules-left": ["custom/omarchy", "hyprland/workspaces"],
+    "modules-center": [
+      "clock",
+      "custom/spotify",
+      "custom/claude-code",
+      "custom/cursor",
+      "custom/claude-desktop",
+      "custom/opencode",
+      "custom/token-usage",
+      "custom/usage-limits",
+      "custom/tasknotes",
+      "custom/weather",
+      "custom/update",
+      "custom/voxtype",
+      "custom/screenrecording-indicator",
+      "custom/idle-indicator",
+      "custom/notification-silencing-indicator"
+    ],
+    "modules-right": [
+      "tray",
+      "custom/agents",
+      "custom/clash-geo",
+      "custom/tailscale",
+      "custom/syncthing",
+      "custom/kdeconnect",
+      "bluetooth",
+      "backlight",
+      "group/audio",
+      "network",
+      "memory",
+      "cpu",
+      "battery"
+    ],
+    "hyprland/workspaces": {
+      "on-click": "activate",
+      "all-outputs": true,
+      "format": "{icon} {windows}",
+      "format-window-separator": " ",
+      "format-icons": {
+        "default": "·",
+        "1": "1",
+        "2": "2",
+        "3": "3",
+        "4": "4",
+        "5": "5",
+        "6": "6",
+        "7": "7",
+        "8": "8",
+        "9": "9",
+        "10": "0",
+        "active": "󱓻",
+        "empty": "·"
+      },
+      "persistent-workspaces": {
+        "1": [],
+        "2": [],
+        "3": [],
+        "4": [],
+        "5": [],
+        "6": []
+      },
+      "workspace-taskbar": {
+        "enable": true,
+        "update-active-window": true,
+        "format": "{icon}",
+        "icon-size": 18,
+        "icon-theme": ["Yaru-blue", "Yaru-olive", "Yaru", "breeze", "breeze-dark", "Adwaita"],
+        "on-click-window": "hyprctl dispatch focuswindow address:{address}"
+      }
+    },
+    "custom/omarchy": {
+      "format": "​",
+      "on-click": "uwsm-app -- omarchy-menu",
+      "on-click-right": "xdg-terminal-exec",
+      "tooltip-format": "Omarchy Menu\n\nSuper + Alt + Space"
+    },
+    "custom/spotify": {
+      "exec": "~/.config/waybar/scripts/spotify-status.sh",
+      "return-type": "json",
+      "interval": 2,
+      "format": "{text}",
+      "tooltip": true,
+      "on-click": "playerctl -p spotify play-pause",
+      "on-click-right": "uwsm-app -- spotify"
+    },
+    "custom/claude-code": {
+      "exec": "~/.config/waybar/scripts/ai-tool-status.sh cc",
+      "return-type": "json",
+      "interval": 2,
+      "format": "{text}",
+      "tooltip": true
+    },
+    "custom/cursor": {
+      "exec": "~/.config/waybar/scripts/ai-tool-status.sh cu",
+      "return-type": "json",
+      "interval": 2,
+      "format": "{text}",
+      "tooltip": true
+    },
+    "custom/claude-desktop": {
+      "exec": "~/.config/waybar/scripts/ai-tool-status.sh cd",
+      "return-type": "json",
+      "interval": 2,
+      "format": "{text}",
+      "tooltip": true,
+      "on-click": "omarchy-launch-or-focus com.anthropic.Claude \"uwsm-app -- /home/jackz/.local/bin/claude-launch\"",
+      "on-click-right": "pkill -f '/usr/lib/claude-desktop/claude' ; sleep 1 ; uwsm-app -- /home/jackz/.local/bin/claude-launch"
+    },
+    "custom/opencode": {
+      "exec": "~/.config/waybar/scripts/ai-tool-status.sh oc",
+      "return-type": "json",
+      "interval": 2,
+      "format": "{text}",
+      "tooltip": true
+    },
+    "custom/token-usage": {
+      "exec": "~/.config/waybar/scripts/token-usage.sh",
+      "return-type": "json",
+      "interval": 60,
+      "format": "{text}",
+      "tooltip": true
+    },
+    "custom/usage-limits": {
+      "exec": "~/.config/waybar/scripts/usage-limits.sh",
+      "return-type": "json",
+      "interval": 300,
+      "format": "{text}",
+      "tooltip": true
+    },
+    "custom/tasknotes": {
+      "exec": "~/.config/waybar/scripts/tasknotes-upcoming.py",
+      "return-type": "json",
+      "interval": 20,
+      "signal": 11,
+      "format": "{text}",
+      "tooltip": true,
+      "on-click": "pkill -RTMIN+11 waybar; uwsm-app -- obsidian",
+      "on-click-right": "~/.config/waybar/scripts/tasknotes-upcoming.py --force >/dev/null; pkill -RTMIN+11 waybar"
+    },
+    "custom/agents": {
+      "exec": "~/.config/waybar/scripts/agents-status.sh",
+      "return-type": "json",
+      "interval": 10,
+      "format": "{text}",
+      "tooltip": true
+    },
+    "custom/clash-geo": {
+      "exec": "~/.config/waybar/scripts/clash-geo-status.sh",
+      "return-type": "json",
+      "interval": 60,
+      "signal": 12,
+      "format": "{text}",
+      "tooltip": true,
+      "on-click": "uwsm-app -- clash-verge",
+      "on-click-right": "rm -f ~/.cache/waybar-status/clash-geo.json; pkill -RTMIN+12 waybar"
+    },
+    "custom/tailscale": {
+      "exec": "~/.config/waybar/scripts/tailscale-status.sh",
+      "return-type": "json",
+      "interval": 15,
+      "format": "{text}",
+      "tooltip": true
+    },
+    "custom/syncthing": {
+      "exec": "~/.config/waybar/scripts/syncthing-status.sh",
+      "return-type": "json",
+      "interval": 15,
+      "format": "{text}",
+      "tooltip": true,
+      "on-click": "xdg-open http://127.0.0.1:8384"
+    },
+    "custom/kdeconnect": {
+      "exec": "~/.config/waybar/scripts/kdeconnect-status.sh",
+      "return-type": "json",
+      "interval": 5,
+      "format": "{text}",
+      "on-click": "uwsm-app -- kdeconnect-app",
+      "tooltip": true
+    },
+    "custom/update": {
+      "format": "",
+      "exec": "omarchy-update-available",
+      "on-click": "omarchy-launch-floating-terminal-with-presentation omarchy-update",
+      "tooltip-format": "Omarchy update available",
+      "signal": 7,
+      "interval": 21600
+    },
+    "cpu": {
+      "interval": 3,
+      "format": "{usage}% 󰍛",
+      "on-click": "omarchy-launch-or-focus-tui btop",
+      "on-click-right": "alacritty"
+    },
+    "memory": {
+      "interval": 5,
+      "format": "{percentage}% 󰘚",
+      "on-click": "omarchy-launch-or-focus-tui btop"
+    },
+    "clock": {
+      "format": "{:L%A %H:%M}",
+      "format-alt": "{:L%d %B W%V %Y}",
+      "tooltip": false,
+      "on-click-right": "omarchy-launch-floating-terminal-with-presentation omarchy-tz-select"
+    },
+    "custom/weather": {
+      "exec": "~/.config/waybar/scripts/weather-status.sh",
+      "return-type": "json",
+      "interval": 600,
+      "signal": 13,
+      "tooltip": true,
+      "on-click": "notify-send -u low \"$(omarchy-weather-status)\""
+    },
+    "network": {
+      "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
+      "format": "{icon}",
+      "format-wifi": "{essid} ({signalStrength}%) {icon}",
+      "format-ethernet": "󰀂",
+      "format-disconnected": "󰤮",
+      "tooltip-format-wifi": "{essid} ({frequency} GHz)",
+      "tooltip-format-ethernet": "Connected",
+      "tooltip-format-disconnected": "Disconnected",
+      "interval": 3,
+      "on-click": "omarchy-launch-wifi"
+    },
+    "backlight": {
+      "device": "intel_backlight",
+      "format": "{percent}% {icon}",
+      "format-icons": ["󰃚", "󰃛", "󰃜", "󰃝", "󰃞", "󰃟", "󰃠"],
+      "tooltip-format": "Brightness {percent}%",
+      "scroll-step": 5,
+      "on-click": "omarchy-launch-audio"
+    },
+    "group/audio": {
+      "orientation": "inherit",
+      "modules": ["pulseaudio#output", "pulseaudio#input"]
+    },
+    "pulseaudio#output": {
+      "format": "{volume}% {icon}",
+      "on-click": "omarchy-launch-audio",
+      "on-click-right": "pamixer -t",
+      "tooltip-format": "Speaker {volume}%",
+      "scroll-step": 5,
+      "format-muted": "",
+      "format-icons": {
+        "headphone": "",
+        "headset": "",
+        "default": ["", "", ""]
+      }
+    },
+    "pulseaudio#input": {
+      "format": "{format_source}",
+      "format-source": "{volume}% 󰍬",
+      "format-source-muted": "󰍭",
+      "tooltip-format": "Microphone {volume}%",
+      "scroll-step": 5,
+      "on-click": "pactl set-source-mute @DEFAULT_SOURCE@ toggle",
+      "on-scroll-up": "pactl set-source-volume @DEFAULT_SOURCE@ +5%",
+      "on-scroll-down": "pactl set-source-volume @DEFAULT_SOURCE@ -5%"
+    },
+    "battery": {
+      "format": "{capacity}% {power:>1.0f}W {icon}",
+      "format-discharging": "{capacity}% {power:>1.0f}W {icon}",
+      "format-charging": "{capacity}% {power:>1.0f}W↑ {icon}",
+      "format-plugged": "{capacity}% ",
+      "format-icons": {
+        "charging": ["󰢜", "󰂆", "󰂇", "󰂈", "󰢝", "󰂉", "󰢞", "󰂊", "󰂋", "󰂅"],
+        "default": ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"]
+      },
+      "format-full": "{capacity}% 󰂅",
+      "tooltip-format-discharging": "{power:>1.0f}W draw · {capacity}%",
+      "tooltip-format-charging": "{power:>1.0f}W charge · {capacity}%",
+      "interval": 5,
+      "on-click": "uwsm-app -- omarchy-menu power",
+      "on-click-right": "notify-send -u low \"$(omarchy-battery-status)\"",
+      "states": {
+        "warning": 20,
+        "critical": 10
+      }
+    },
+    "bluetooth": {
+      "format": "",
+      "format-off": "󰂲",
+      "format-disabled": "󰂲",
+      "format-connected": "󰂱",
+      "format-no-controller": "",
+      "tooltip-format": "Devices connected: {num_connections}",
+      "on-click": "omarchy-launch-bluetooth"
+    },
+    "tray": {
+      "icon-size": 16,
+      "spacing": 6,
+      "show-passive-items": true
+    },
+    "custom/screenrecording-indicator": {
+      "on-click": "omarchy-capture-screenrecording",
+      "exec": "$OMARCHY_PATH/default/waybar/indicators/screen-recording.sh",
+      "signal": 8,
+      "return-type": "json"
+    },
+    "custom/idle-indicator": {
+      "on-click": "omarchy-toggle-idle",
+      "exec": "$OMARCHY_PATH/default/waybar/indicators/idle.sh",
+      "signal": 9,
+      "return-type": "json"
+    },
+    "custom/notification-silencing-indicator": {
+      "on-click": "omarchy-toggle-notification-silencing",
+      "exec": "$OMARCHY_PATH/default/waybar/indicators/notification-silencing.sh",
+      "signal": 10,
+      "return-type": "json"
+    },
+    "custom/voxtype": {
+      "exec": "omarchy-voxtype-status",
+      "return-type": "json",
+      "format": "{icon}",
+      "format-icons": {
+        "idle": "",
+        "recording": "󰍬",
+        "transcribing": "󰔟"
+      },
+      "tooltip": true,
+      "on-click-right": "omarchy-voxtype-config",
+      "on-click": "omarchy-voxtype-model"
+    }
+  }
+]

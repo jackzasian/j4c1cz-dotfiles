@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Anki with Clash proxy required for AnkiWeb sync.
+set -euo pipefail
+
+source "${HOME}/.config/omarchy/proxy.sh" 2>/dev/null || true
+PORT=$(_clash_mixed_port 2>/dev/null || echo 7897)
+
+if ! _clash_listening 2>/dev/null; then
+  notify-send -u critical "Anki Sync" "Start Clash Verge first (127.0.0.1:${PORT})." 2>/dev/null || true
+  exit 1
+fi
+
+proxy_on >/dev/null 2>&1 || true
+exec "${HOME}/.local/bin/anki-launch" "$@"

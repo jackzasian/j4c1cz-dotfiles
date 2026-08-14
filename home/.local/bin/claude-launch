@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Launch Claude Desktop through Clash mixed-port proxy.
+# Bundled Electron ignores ~/.config/electron-flags.conf and system proxy;
+# without --proxy-server it exits DIRECT (CN) → Anthropic "unavailable in region".
+# Do not route Anthropic via Hong Kong — use 主代理 (US) under rule mode.
+
+set -euo pipefail
+
+source "${HOME}/.config/omarchy/proxy.sh" 2>/dev/null || true
+
+PORT=$(_clash_mixed_port 2>/dev/null || echo 7897)
+
+if ! _clash_listening 2>/dev/null; then
+  notify-send -u critical "Claude" "Start Clash Verge first — Claude needs proxy on 127.0.0.1:${PORT}." 2>/dev/null || \
+    echo "Start Clash Verge first — Claude needs proxy on 127.0.0.1:${PORT}" >&2
+fi
+
+# Pass-through to /usr/bin/claude-desktop (Wayland/GPU/keyring flags), then Electron.
+exec /usr/bin/claude-desktop --proxy-server="http://127.0.0.1:${PORT}" "$@"

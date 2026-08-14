@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+set -e
+
+USER=${SUDO_USER:-$USER}
+USER_HOME=$(getent passwd $USER | cut -d: -f6)
+
+if [ -z "$XDG_DATA_HOME" ]; then
+  XDG_DATA_HOME="$USER_HOME/.local/share"
+fi
+DATA_DIR="$XDG_DATA_HOME/xr_driver"
+if [ ! -e "$DATA_DIR/manifest" ]; then
+  echo "Verification failed" >&2
+  exit 1
+fi
+
+# Get the directory of the current script
+script_dir=$(dirname "$0")
+
+# create a string to string mapping, file name to expected file location
+declare -A file_paths
+file_paths=(
+  ["xrDriver"]="/home/jackz/.local/bin/xrDriver"
+  ["xr_driver_cli"]="/home/jackz/.local/bin/xr_driver_cli"
+  ["xr_driver_uninstall"]="/home/jackz/.local/bin/xr_driver_uninstall"
+  ["xr_driver_logs"]="/home/jackz/.local/bin/xr_driver_logs"
+)
+
+# verify the file hashes in ./manifest
+while IFS= read -r line
+do
+  # split the line into hash and filename
+  manifest_hash=$(echo $line | awk '{print $1}')
+  file=$(echo $line | awk '{print $2}')
+
+  actual_file_path=${file_paths[$file]}
+
+  # compute the SHA256 hash of the actual file
+  actual_hash=$(sha256sum $actual_file_path | awk '{print $1}')
+
+  # compare the hashes
+  if ! [ "$manifest_hash" = "$actual_hash" ]; then
+    echo "Verification failed" >&2
+    exit 1
+  fi
+done < "$DATA_DIR/manifest"
+
+echo "Verification succeeded"

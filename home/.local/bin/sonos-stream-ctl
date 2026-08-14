@@ -1,0 +1,73 @@
+#!/bin/bash
+
+# Control Sonos Roam playback of the local HTTP MP3 stream.
+# Usage: sonos-stream-ctl start|stop|status
+
+ROAM=10.69.10.27
+PORT=1400
+CTRL="http://$ROAM:$PORT/MediaRenderer/AVTransport/Control"
+ENV='<?xml version="1.0"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body>'
+
+local_ip() {
+	ip -4 -o addr show wlan0 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -1
+}
+
+URL="http://$(local_ip):8071/sonos.mp3"
+
+upnp() {
+	local action="$1" body="$2"
+	curl -s --max-time 5 -X POST -H 'Content-Type: text/xml; charset=utf-8' \
+		-H "SOAPACTION: \"urn:schemas-upnp-org:service:AVTransport:1#$action\"" \
+		--data "${ENV}<u:${action} xmlns:u=\"urn:schemas-upnp-org:service:AVTransport:1\">${body}</u:${action}></s:Body></s:Envelope>" \
+		"$CTRL"
+}
+
+transport_state() {
+	upnp GetTransportInfo '<InstanceID>0</InstanceID>' | grep -oE '<CurrentTransportState>[^<]*' | sed 's/<CurrentTransportState>//'
+}
+
+current_uri() {
+	upnp GetPositionInfo '<InstanceID>0</InstanceID>' | grep -oE '<TrackURI>[^<]*' | sed 's/<TrackURI>//'
+}
+
+cmd_start() {
+	local state uri
+	uri=$(current_uri)
+	state=$(transport_state)
+	if [[ -z "$uri" ]] || [[ -z "$state" ]]; then
+		echo "Roam unreachable" >&2
+		return 1
+	fi
+	if [[ "$uri" == "$URL" ]]; then
+		if [[ "$state" == "PLAYING" ]]; then
+			echo "already playing our stream"
+			return 0
+		fi
+		echo "URI set, state=$state -> play"
+	else
+		echo "setting URI (was: $uri)"
+		upnp SetAVTransportURI "<InstanceID>0</InstanceID><CurrentURI>$URL</CurrentURI><CurrentURIMetaData></CurrentURIMetaData>" >/dev/null
+		sleep 0.3
+	fi
+	upnp Play '<InstanceID>0</InstanceID><Speed>1</Speed>' >/dev/null
+	sleep 1
+	echo "now: state=$(transport_state)"
+}
+
+cmd_stop() {
+	local uri
+	uri=$(current_uri)
+	if [[ "$uri" != "$URL" ]]; then
+		echo "not our stream ($uri) - leaving alone"
+		return 0
+	fi
+	upnp Stop '<InstanceID>0</InstanceID>' >/dev/null
+	echo "stopped"
+}
+
+case "${1:-}" in
+	start) cmd_start ;;
+	stop) cmd_stop ;;
+	status) echo "url=$URL state=$(transport_state) uri=$(current_uri)" ;;
+	*) echo "usage: $0 start|stop|status" >&2; exit 1 ;;
+esac

@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# Symlink existing videos into ~/Videos/Offline without duplicating disk use.
+set -euo pipefail
+
+# shellcheck source=/dev/null
+source "${HOME}/.local/lib/xreal/common.sh"
+
+OFFLINE_ROOT="${HOME}/Videos/Offline"
+
+usage() {
+  cat <<'EOF'
+Usage: xreal-offline-link <video-file> [category]
+
+Categories: movies (default), series, other
+
+Examples:
+  xreal-offline-link ~/Videos/yes.mp4
+  xreal-offline-link ~/Videos/show/S01E01.mkv series
+  xreal-offline-link --scan ~/Videos
+
+--scan DIR   Symlink all videos found under DIR into Offline/Other/
+EOF
+}
+
+link_one() {
+  local src=$1 category=${2:-movies}
+  local dest_dir base dest
+
+  [[ -f $src ]] || { echo "Not a file: $src" >&2; exit 1; }
+  xreal_is_video "$src" || { echo "Not a video file: $src" >&2; exit 1; }
+
+  case $category in
+    movie|movies) dest_dir="${OFFLINE_ROOT}/Movies" ;;
+    series|show|tv) dest_dir="${OFFLINE_ROOT}/Series" ;;
+    other) dest_dir="${OFFLINE_ROOT}/Other" ;;
+    *)
+      echo "Unknown category: $category" >&2
+      exit 1
+      ;;
+  esac
+
+  mkdir -p "$dest_dir"
+  base=$(basename "$src")
+  dest="${dest_dir}/${base}"
+
+  if [[ -e $dest ]]; then
+    if [[ -L $dest && "$(readlink -f "$dest")" == "$(readlink -f "$src")" ]]; then
+      echo "Already linked: $dest"
+      return 0
+    fi
+    echo "Destination exists: $dest" >&2
+    exit 1
+  fi
+
+  ln -s "$(readlink -f "$src")" "$dest"
+  echo "Linked: $dest -> $src"
+}
+
+scan_dir() {
+  local dir=$1 count=0
+  [[ -d $dir ]] || { echo "Not a directory: $dir" >&2; exit 1; }
+  mkdir -p "${OFFLINE_ROOT}/Other"
+
+  while IFS= read -r -d '' file; do
+    if [[ $file == "$OFFLINE_ROOT"* ]]; then
+      continue
+    fi
+    link_one "$file" other && count=$((count + 1)) || true
+  done < <(find "$dir" -type f \( \
+    -iname '*.mp4' -o -iname '*.mkv' -o -iname '*.avi' -o -iname '*.webm' -o \
+    -iname '*.mov' -o -iname '*.m4v' \
+  \) ! -path '*/.*' -print0 2>/dev/null)
+
+  echo "Scan complete: ${count} link(s) in ${OFFLINE_ROOT}/Other"
+}
+
+main() {
+  mkdir -p "${OFFLINE_ROOT}"/{Movies,Series,Other}
+
+  if [[ $# -eq 0 ]]; then
+    usage
+    exit 1
+  fi
+
+  if [[ $1 == --scan ]]; then
+    scan_dir "${2:-${HOME}/Videos}"
+    return
+  fi
+
+  local file=${1:?}
+  local category=${2:-movies}
+  link_one "$file" "$category"
+}
+
+main "$@"

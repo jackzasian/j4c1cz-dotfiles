@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Scheduled wrapper for folder-sort — logs each run.
+set -euo pipefail
+
+LOG_DIR="${HOME}/.local/share/folder-sort"
+mkdir -p "$LOG_DIR"
+LOG="${LOG_DIR}/$(date +%Y-%m-%d_%H%M%S).log"
+
+{
+  echo "=== folder-sort $(date -Iseconds) ==="
+  folder-sort --all --apply
+  echo "=== done $(date -Iseconds) ==="
+} >>"$LOG" 2>&1
+
+# Keep last 20 log files
+ls -1t "$LOG_DIR"/*.log 2>/dev/null | tail -n +21 | xargs -r rm -f --

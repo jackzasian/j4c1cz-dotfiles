@@ -1,0 +1,7 @@
+[Unit]
+Description=Import Strava activities into Obsidian vault
+
+[Service]
+Type=oneshot
+ExecStart=/home/jackz/Obsidian/J4c1c/.venv/bin/python /home/jackz/Obsidian/J4c1c/strava_import.py --days 3
+WorkingDirectory=/home/jackz/Obsidian/J4c1c

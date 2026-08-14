@@ -1,0 +1,10 @@
+[Unit]
+Description=power-profile-policy every 2 minutes
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=2min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

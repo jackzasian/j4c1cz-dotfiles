@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily Obsidian vault backup (AC only)
+ConditionACPower=true
+
+[Timer]
+OnCalendar=*-*-* 21:00:00
+Persistent=true
+OnBootSec=10min
+
+[Install]
+WantedBy=timers.target

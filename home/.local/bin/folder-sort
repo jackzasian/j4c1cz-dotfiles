@@ -1,0 +1,297 @@
+#!/usr/bin/env bash
+# Sort loose files into category folders (_Sorted layout).
+# Usage: folder-sort [--apply] [--all] [--target DIR] [SOURCE...]
+set -euo pipefail
+
+APPLY=0
+ALL=0
+TARGET=""
+SOURCES=()
+
+usage() {
+  cat <<'EOF'
+folder-sort — sort loose files into category folders
+
+Usage:
+  folder-sort [OPTIONS] [SOURCE...]
+
+Options:
+  --apply          Actually move files (default is dry-run)
+  --all            Sort all standard home folders (Desktop, Downloads, Pictures,
+                   Videos, Developer, Work, Documents subdirs)
+  --target DIR     Sort destination (default: SOURCE/_Sorted, or ~/Downloads/_Sorted)
+  -h, --help       Show this help
+
+If no SOURCE is given, sorts ~/Desktop and ~/Downloads.
+
+Categories match ~/Downloads/_Sorted/:
+  Images, PDF, Docs, Text, Media, 3D, Books, Data, Web, Other
+
+Special routing:
+  CleanShot*.png, screenshot-*.png → ~/Pictures/Screenshots/
+  *.ics, *.gpx, *.fit, *.tcx, training CSVs → ~/Documents/Training/
+  Study PDFs (CIE/9700/9699/physics/sociology) → ~/Documents/Studying/
+  Past papers (QP/MS, _qp_, _ms_) → ~/Documents/Alevel/
+  AS物理*.jpg → ~/Documents/Studying/PHYSICS/
+  Loose videos in ~/Videos → ~/Videos/_Sorted/Media/
+  *.rayconfig → ~/Developer/_Sorted/Configs/
+
+Safety:
+  - Skips hidden dotfiles (except removes .DS_Store / .localized when --apply)
+  - Never deletes user files; only moves loose top-level files
+  - Dry-run by default — pass --apply to execute
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --apply) APPLY=1; shift ;;
+    --all) ALL=1; shift ;;
+    --target) TARGET="$2"; shift 2 ;;
+    -h|--help) usage; exit 0 ;;
+    -*) echo "Unknown option: $1" >&2; usage; exit 1 ;;
+    *) SOURCES+=("$1"); shift ;;
+  esac
+done
+
+if [[ "$ALL" -eq 1 ]]; then
+  SOURCES=(
+    ~/Desktop
+    ~/Downloads
+    ~/Pictures
+    ~/Videos
+    ~/Developer
+    ~/Work
+    ~/Documents/Alevel
+    ~/Documents/Training
+    ~/Documents/Studying
+    ~/Documents/Exports
+  )
+elif [[ ${#SOURCES[@]} -eq 0 ]]; then
+  SOURCES=(~/Desktop ~/Downloads)
+fi
+
+expanded_sources=()
+for s in "${SOURCES[@]}"; do
+  expanded_sources+=("$(eval echo "$s")")
+done
+SOURCES=("${expanded_sources[@]}")
+
+declare -A EXT_MAP=(
+  [jpg]=Images [jpeg]=Images [png]=Images [gif]=Images [webp]=Images [heic]=Images [svg]=Images
+  [pdf]=PDF
+  [doc]=Docs [docx]=Docs [odt]=Docs [rtf]=Docs [pages]=Docs [xlsx]=Docs
+  [txt]=Text [md]=Text [csv]=Text [json]=Text [yaml]=Text [yml]=Text [xml]=Text
+  [mp4]=Media [mkv]=Media [mov]=Media [avi]=Media [mp3]=Media [wav]=Media [m4a]=Media
+  [stl]=3D [obj]=3D [3mf]=3D [step]=3D [stp]=3D
+  [epub]=Books [mobi]=Books
+  [zip]=Data [tar]=Data [gz]=Data [7z]=Data [rar]=Data
+  [apk]=Data
+  [html]=Web [htm]=Web
+  [rayconfig]=Configs
+  [py]=Scripts
+  [sh]=Scripts
+)
+
+log() { printf '%s\n' "$*"; }
+
+resolve_category() {
+  local file="$1" source_dir="$2"
+  local base ext lower
+  base=$(basename "$file")
+  lower="${base,,}"
+
+  if [[ "$base" == CleanShot* ]] || [[ "$base" == screenshot-* ]]; then
+    echo "SCREENSHOTS"; return
+  fi
+
+  case "$lower" in
+    *.ics|*.gpx|*.fit|*.tcx) echo "TRAINING"; return ;;
+    *.rayconfig) echo "CONFIGS"; return ;;
+  esac
+
+  if [[ "$source_dir" == *"/Documents/Training" ]]; then
+    case "$lower" in
+      *.py) echo "TRAINING_SCRIPTS"; return ;;
+      *.csv|*.xlsx|*.ics) echo "TRAINING_DATA"; return ;;
+      *.zip) echo "TRAINING_ARCHIVES"; return ;;
+      *.txt) echo "TRAINING_NOTES"; return ;;
+    esac
+  fi
+
+  if [[ "$lower" == *as物理* ]] || [[ "$lower" == *物理知识点* ]]; then
+    echo "STUDYING_PHYSICS"; return
+  fi
+
+  if [[ "$lower" =~ (_qp_|_ms_|[[:space:]]qp\.pdf|[[:space:]]ms\.pdf|_[0-9]+_qp|_[0-9]+_ms) ]]; then
+    echo "ALEVEL"; return
+  fi
+
+  if [[ "$lower" =~ (cie|9700|9699|alevel|biology|sociology|chapter[[:space:]]*[0-9]) ]] && [[ "$lower" == *.pdf || "$lower" == *.doc* || "$lower" == *.md ]]; then
+    echo "STUDYING"; return
+  fi
+
+  if [[ "$source_dir" == *"/Videos" ]] && [[ "$lower" == *.mp4 || "$lower" == *.mov || "$lower" == *.mkv ]]; then
+    echo "VIDEO_MEDIA"; return
+  fi
+
+  ext="${base##*.}"
+  if [[ "$ext" == "$base" ]]; then echo "Other"; return; fi
+  ext="${ext,,}"
+  echo "${EXT_MAP[$ext]:-Other}"
+}
+
+dest_for_category() {
+  local cat="$1" source_dir="$2"
+  local sorted_root
+
+  if [[ -n "$TARGET" ]]; then
+    sorted_root="$TARGET"
+  elif [[ "$source_dir" == */Downloads || "$source_dir" == */Downloads/* ]]; then
+    sorted_root="$HOME/Downloads/_Sorted"
+  elif [[ "$source_dir" == */Developer* ]]; then
+    sorted_root="$HOME/Developer/_Sorted"
+  elif [[ "$source_dir" == */Videos* ]]; then
+    sorted_root="$HOME/Videos/_Sorted"
+  elif [[ "$source_dir" == */Work* ]]; then
+    sorted_root="$HOME/Work/_Sorted"
+  else
+    sorted_root="$source_dir/_Sorted"
+  fi
+
+  case "$cat" in
+    SCREENSHOTS) echo "$HOME/Pictures/Screenshots" ;;
+    TRAINING) echo "$HOME/Documents/Training/data" ;;
+    TRAINING_SCRIPTS) echo "$HOME/Documents/Training/scripts" ;;
+    TRAINING_DATA) echo "$HOME/Documents/Training/data" ;;
+    TRAINING_ARCHIVES) echo "$HOME/Documents/Training/archives" ;;
+    TRAINING_NOTES) echo "$HOME/Documents/Training/notes" ;;
+    ALEVEL) echo "$HOME/Documents/Alevel" ;;
+    STUDYING) echo "$HOME/Documents/Studying/inbox" ;;
+    STUDYING_PHYSICS) echo "$HOME/Documents/Studying/PHYSICS/reference-images" ;;
+    VIDEO_MEDIA) echo "$HOME/Videos/_Sorted/Media" ;;
+    CONFIGS) echo "$HOME/Developer/_Sorted/Configs" ;;
+    Scripts) echo "$sorted_root/Scripts" ;;
+    *) echo "$sorted_root/$cat" ;;
+  esac
+}
+
+move_file() {
+  local src="$1" dest_dir="$2"
+  local name dest
+  name=$(basename "$src")
+  dest="$dest_dir/$name"
+
+  if [[ -e "$dest" ]]; then
+    local stem="${name%.*}" ext="${name##*.}" i=1
+    if [[ "$stem" == "$name" ]]; then ext=""; else ext=".$ext"; fi
+    while [[ -e "$dest_dir/${stem}-${i}${ext}" ]]; do ((i++)); done
+    dest="$dest_dir/${stem}-${i}${ext}"
+  fi
+
+  if [[ "$APPLY" -eq 1 ]]; then
+    mkdir -p "$dest_dir"
+    mv -- "$src" "$dest"
+    log "MOVED: $src → $dest"
+  else
+    log "WOULD MOVE: $src → $dest"
+  fi
+}
+
+remove_junk() {
+  local path="$1"
+  [[ "$APPLY" -eq 1 ]] || return 0
+  [[ -f "$path" ]] || return 0
+  case "$(basename "$path")" in
+    .DS_Store|.localized|._*)
+      rm -f -- "$path"
+      log "REMOVED: $path"
+      ;;
+  esac
+}
+
+total=0
+for source in "${SOURCES[@]}"; do
+  [[ -d "$source" ]] || { log "SKIP (not a dir): $source"; continue; }
+
+  shopt -s nullglob
+  for item in "$source"/* "$source"/.*; do
+    [[ -f "$item" ]] || continue
+    base=$(basename "$item")
+    [[ "$base" == "." || "$base" == ".." ]] && continue
+
+    if [[ "$base" == .DS_Store || "$base" == .localized || "$base" == ._?* ]]; then
+      remove_junk "$item"
+      continue
+    fi
+    [[ "$base" == .* ]] && continue
+
+    cat=$(resolve_category "$item" "$source")
+    dest_dir=$(dest_for_category "$cat" "$source")
+    move_file "$item" "$dest_dir"
+    ((total++)) || true
+  done
+  shopt -u nullglob
+done
+
+# Home-level loose files (non-dot config files only)
+HOME_EXTRAS=(~/sanitize-profile.sh ~/steam.desktop ~/durdraw.log)
+for item in "${HOME_EXTRAS[@]}"; do
+  item=$(eval echo "$item")
+  [[ -f "$item" ]] || continue
+  case "$(basename "$item")" in
+    sanitize-profile.sh)
+      move_file "$item" "$HOME/.local/bin"
+      ((total++)) || true
+      ;;
+    steam.desktop)
+      move_file "$item" "$HOME/.local/share/applications"
+      ((total++)) || true
+      ;;
+    durdraw.log)
+      if [[ "$APPLY" -eq 1 ]]; then
+        mkdir -p "$HOME/.cache/logs"
+        mv -- "$item" "$HOME/.cache/logs/"
+        log "MOVED: $item → $HOME/.cache/logs/"
+      else
+        log "WOULD MOVE: $item → $HOME/.cache/logs/"
+      fi
+      ((total++)) || true
+      ;;
+  esac
+done
+
+# Move extracted anime-master dir into _Sorted/Data if loose in Downloads
+if [[ -d "$HOME/Downloads/anime-master" && "$APPLY" -eq 1 ]]; then
+  mkdir -p "$HOME/Downloads/_Sorted/Data"
+  if [[ ! -d "$HOME/Downloads/_Sorted/Data/anime-master" ]]; then
+    mv "$HOME/Downloads/anime-master" "$HOME/Downloads/_Sorted/Data/"
+    log "MOVED: ~/Downloads/anime-master → ~/Downloads/_Sorted/Data/anime-master"
+  fi
+elif [[ -d "$HOME/Downloads/anime-master" ]]; then
+  log "WOULD MOVE: ~/Downloads/anime-master → ~/Downloads/_Sorted/Data/anime-master"
+fi
+
+# Organize migration-backup mac metadata
+if [[ -d "$HOME/migration-backup" ]]; then
+  shopt -s nullglob
+  for item in "$HOME/migration-backup"/._*; do
+    [[ -f "$item" ]] || continue
+    if [[ "$APPLY" -eq 1 ]]; then
+      mkdir -p "$HOME/migration-backup/_mac-metadata"
+      mv -- "$item" "$HOME/migration-backup/_mac-metadata/"
+      log "MOVED: $item → migration-backup/_mac-metadata/"
+    else
+      log "WOULD MOVE: $item → migration-backup/_mac-metadata/"
+    fi
+    ((total++)) || true
+  done
+  shopt -u nullglob
+fi
+
+if [[ "$total" -eq 0 ]]; then
+  log "Nothing to sort."
+elif [[ "$APPLY" -eq 0 ]]; then
+  log ""
+  log "Dry run complete ($total file(s)). Re-run with --apply to move."
+fi

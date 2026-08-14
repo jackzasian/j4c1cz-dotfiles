@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+# Video library picker for XREAL glasses — scans all of ~/Videos.
+set -euo pipefail
+
+# shellcheck source=/dev/null
+source "${HOME}/.local/lib/xreal/common.sh"
+
+VIDEOS_ROOT="${HOME}/Videos"
+OFFLINE_ONLY="${XREAL_LIBRARY_OFFLINE_ONLY:-0}"
+
+pick_zenity() {
+  local start_dir=$1
+  local chosen
+  chosen=$(zenity --file-selection \
+    --title="Videos (XREAL)" \
+    --filename="${start_dir}/" \
+    --file-filter='Video files | *.mp4 *.mkv *.avi *.webm *.mov *.m4v' \
+    --file-filter='All files | *' 2>/dev/null) || true
+  [[ -n $chosen && -f $chosen ]] || exit 0
+  printf '%s\n' "$chosen"
+}
+
+collect_videos() {
+  local -a roots=()
+  if [[ $OFFLINE_ONLY == "1" ]]; then
+    roots+=("${VIDEOS_ROOT}/Offline")
+  else
+    roots+=("$VIDEOS_ROOT")
+  fi
+
+  local root
+  for root in "${roots[@]}"; do
+    [[ -d $root ]] || continue
+    find "$root" -type f \( \
+      -iname '*.mp4' -o -iname '*.mkv' -o -iname '*.avi' -o -iname '*.webm' -o \
+      -iname '*.mov' -o -iname '*.m4v' -o -iname '*.ts' -o -iname '*.m2ts' -o \
+      -iname '*.mpg' -o -iname '*.mpeg' \
+    \) ! -path '*/.*' 2>/dev/null
+  done | sort -u
+}
+
+display_name_for() {
+  local path=$1 rel
+  rel=${path#"${VIDEOS_ROOT}/"}
+  if [[ $rel == "$path" ]]; then
+    basename "$path"
+  else
+    printf '%s\n' "$rel"
+  fi
+}
+
+pick_fzf() {
+  local selection
+  if ! command -v fzf >/dev/null 2>&1; then
+    echo "fzf not found — use: xreal-library --pick" >&2
+    pick_zenity "$VIDEOS_ROOT"
+    return
+  fi
+
+  selection=$(collect_videos | fzf \
+    --prompt='Videos> ' \
+    --header='Enter to play on XREAL · Esc to cancel' \
+    --height=40% \
+    --reverse \
+    --info=inline \
+    --preview='basename {}' 2>/dev/null) || true
+
+  [[ -n $selection && -f $selection ]] || exit 0
+  printf '%s\n' "$selection"
+}
+
+pick_zenity_list() {
+  local list selection
+  list=$(collect_videos | while IFS= read -r path; do
+    display_name_for "$path"
+    printf '%s\n' "$path"
+  done)
+
+  if [[ -z $list ]]; then
+    xreal_app_error "No videos found in ~/Videos.\n\nAdd video files anywhere under that folder."
+    exit 1
+  fi
+
+  selection=$(printf '%s\n' "$list" | zenity --list \
+    --title="Videos (XREAL)" \
+    --text="Choose a video from ~/Videos" \
+    --column="Title" --column="Path" \
+    --hide-column=2 \
+    --width=720 --height=520 2>/dev/null) || exit 0
+
+  [[ -n $selection && -f $selection ]] || exit 0
+  printf '%s\n' "$selection"
+}
+
+usage() {
+  cat <<'EOF'
+Usage: xreal-library [--pick|--app|--browse]
+
+Browse ~/Videos and play a file on XREAL glasses.
+
+  --pick       Zenity file dialog
+  --app        App mode: cinema mode + GUI list (from XREAL Cinema)
+  --browse     App mode: cinema mode + browse any file
+  --offline    Scan only ~/Videos/Offline
+
+Launch from app menu: XREAL Cinema
+EOF
+}
+
+main() {
+  local mode=auto
+  local app_mode=false
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --pick) mode=zenity ;;
+      --app) app_mode=true; mode=zenity-list ;;
+      --browse) app_mode=true; mode=browse ;;
+      --offline) OFFLINE_ONLY=1 ;;
+      -h|--help) usage; exit 0 ;;
+      *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
+    esac
+    shift
+  done
+
+  mkdir -p "${VIDEOS_ROOT}/Offline"/{Movies,Series,Other}
+
+  if [[ $app_mode == true ]]; then
+    local mon
+    mon=$(xreal_app_prepare) || {
+      xreal_app_error "No XREAL glasses detected.\n\nPlug in via USB-C first."
+      exit 1
+    }
+  fi
+
+  if [[ $mode == auto && ! -t 0 ]]; then
+    mode=zenity-list
+    if ! xreal_app_prepare >/dev/null 2>&1; then
+      xreal_app_error "No XREAL glasses detected.\n\nPlug in via USB-C first."
+      exit 1
+    fi
+  fi
+
+  local file
+  case $mode in
+    zenity) file=$(pick_zenity "$VIDEOS_ROOT") ;;
+    browse) file=$(pick_zenity "$VIDEOS_ROOT") ;;
+    zenity-list) file=$(pick_zenity_list) ;;
+    *) file=$(pick_fzf) ;;
+  esac
+
+  [[ -n $file ]] || exit 0
+  exec xreal play "$file"
+}
+
+main "$@"

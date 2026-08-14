@@ -1,0 +1,70 @@
+#!/bin/bash
+package="opencode-ai"
+command="opencode"
+
+if ! node_root="$(mise where node@latest 2>/dev/null)"; then
+  mise use -g node@latest >/dev/null
+  node_root="$(mise where node@latest)"
+fi
+
+node_bin="$node_root/bin/node"
+npx_bin="$node_root/bin/npx"
+
+# Pick up Clash proxy if available (npx/npm need it outside China).
+if [[ -z ${http_proxy:-} && -f "${HOME}/.config/omarchy/proxy.sh" ]]; then
+  # shellcheck source=/dev/null
+  source "${HOME}/.config/omarchy/proxy.sh"
+  proxy_on >/dev/null 2>&1 || true
+fi
+
+ensure_bin_runtime() {
+  local bin_path=$1
+  local shebang
+
+  IFS= read -r shebang < "$bin_path"
+
+  if [[ $shebang == "#!"*"/bun"* || $shebang == "#!"*"/env bun"* ]]; then
+    if omarchy-cmd-missing bun; then
+      echo "Installing bun runtime for $package..."
+      omarchy-pkg-add bun
+      hash -r
+    fi
+  fi
+}
+
+exec_package_bin() {
+  local package_bin_path=$1
+  shift
+
+  if [[ -n $package_bin_path ]]; then
+    ensure_bin_runtime "$package_bin_path"
+    PATH="$node_root/bin:$PATH" exec "$package_bin_path" "$@"
+  fi
+}
+
+# Re-check for a newer release at most once a day so the offline cache below
+# doesn't silently go stale for weeks (it did: stuck on 1.18.11 for ~2 weeks
+# while 1.18.18 was out, which caused a TUI crash already fixed upstream).
+# Capped at 8s so a dead proxy/network can't hang every single launch.
+state_dir="${HOME}/.local/state/opencode-wrapper"
+mkdir -p "$state_dir"
+stamp_file="$state_dir/last-update-check"
+now=$(date +%s)
+last=$(cat "$stamp_file" 2>/dev/null || echo 0)
+if (( now - last > 86400 )); then
+  if timeout 8 "$node_bin" "$npx_bin" --yes --package "$package@latest" -- which "$command" >/dev/null 2>&1; then
+    echo "$now" > "$stamp_file"
+  fi
+fi
+
+# Prefer cached install — --prefer-online hangs for minutes when Clash nodes are down.
+package_bin_path=$("$node_bin" "$npx_bin" --yes --offline --package "$package" -- which "$command" 2>/dev/null) \
+  || package_bin_path=$("$node_bin" "$npx_bin" --yes --package "$package" -- which "$command" 2>/dev/null)
+exec_package_bin "$package_bin_path" "$@"
+
+package_bin_path=$("$node_bin" "$npx_bin" --yes --package "$package" -- which "$package" 2>/dev/null)
+exec_package_bin "$package_bin_path" "$@"
+
+echo "Could not resolve npm bin for $package / $command" >&2
+echo "Tip: proxy_on && npx --yes --package opencode-ai -- which opencode" >&2
+exit 127

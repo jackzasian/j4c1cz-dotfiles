@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# KDE Connect debug + pairing help (dual-NIC / discovery issues).
+
+set -euo pipefail
+
+WLAN_IF="${WLAN_IF:-wlan0}"
+LAN_IP=$(ip -4 -o addr show "$WLAN_IF" 2>/dev/null | awk '{print $4}' | cut -d/ -f1)
+ETH_IP=$(ip -4 -o addr show | awk '!/wlan0|lo|tailscale|docker|br-/ {print $4; exit}' | cut -d/ -f1)
+MY_ID=$(kdeconnect-cli --my-id 2>/dev/null || true)
+PHONE_IP="${1:-10.69.10.173}"
+
+echo "=== KDE Connect status ==="
+echo
+echo "ThinkPad WiFi IP:  ${LAN_IP:-none}  ($WLAN_IF)"
+echo "ThinkPad other IP: ${ETH_IP:-none}  (dock/ethernet — often steals broadcasts)"
+echo "ThinkPad ID:       ${MY_ID:-unknown}"
+echo "Phone IP hint:     ${PHONE_IP} (Nothing Phone 2a — pass new IP as \$1 if changed)"
+echo
+kdeconnect-cli -l 2>/dev/null || true
+echo
+echo "Available (paired+reachable):"
+kdeconnect-cli -a 2>/dev/null || echo "  (none)"
+echo
+
+echo "=== Network checks ==="
+if [[ -n ${PHONE_IP} ]]; then
+  if ping -c1 -W2 "$PHONE_IP" &>/dev/null; then
+    echo "ping ${PHONE_IP}: OK"
+  else
+    echo "ping ${PHONE_IP}: FAIL — phone offline or different IP"
+  fi
+  if timeout 2 bash -c "echo >/dev/tcp/${PHONE_IP}/1716" 2>/dev/null; then
+    echo "TCP ${PHONE_IP}:1716: open (KDE Connect app likely running)"
+  else
+    echo "TCP ${PHONE_IP}:1716: closed — open KDE Connect on the phone"
+  fi
+fi
+if [[ -n ${LAN_IP} ]]; then
+  if timeout 2 bash -c "echo >/dev/tcp/${LAN_IP}/1716" 2>/dev/null; then
+    echo "TCP self ${LAN_IP}:1716: kdeconnectd listening OK"
+  else
+    echo "TCP self ${LAN_IP}:1716: FAIL — start: /usr/bin/kdeconnectd &"
+  fi
+fi
+echo
+echo "Default route (broadcasts follow this — ethernet wins if metric lower):"
+ip -4 route | awk '/^default/ {print "  "$0}'
+echo
+
+echo "=== Fix when paired but unreachable ==="
+echo "1. Phone + ThinkPad on same WiFi (zwifi). Open KDE Connect app on phone."
+echo "2. ON PHONE: ≡ → Add device by IP → enter WiFi IP: ${LAN_IP:-<wlan0>}"
+echo "3. Accept pair / reconnect on ThinkPad (this window / Super+Shift+K)."
+echo "4. Phone: Settings → Trusted networks → add zwifi; disable battery kill for KDE Connect."
+echo
+echo "PC already has customDevices=${PHONE_IP} in ~/.config/kdeconnect/config"
+echo "(unicast discovery — needed when dock ethernet has lower metric than WiFi)."
+echo
+echo "If still dead: unplug dock ethernet briefly, or raise ethernet metric:"
+echo "  sudo ip route del default via <eth-gw> dev <eth>"
+echo "  # or in NetworkManager set ethernet route metric > 600"
+echo
+echo "Verify:"
+echo "  kdeconnect-cli --refresh && kdeconnect-cli -a"
+echo "  kdeconnect-cli -d \$(kdeconnect-cli -a --id-only | head -1) --ping"

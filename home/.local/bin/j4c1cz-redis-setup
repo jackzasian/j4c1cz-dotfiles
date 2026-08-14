@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Disabled: Obsidian publishing uses git push (`j4c1cz sync`), not Redis.
+echo "j4c1cz-redis-setup: disabled." >&2
+echo "Obsidian → site uses: j4c1cz sync  (see ~/Developer/j4c1cz/docs/PUBLISH.md)" >&2
+echo "Do not provision Redis for blog posts. Original script: ~/.local/bin/j4c1cz-redis-setup.bak" >&2
+exit 1

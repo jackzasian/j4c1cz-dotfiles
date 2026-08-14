@@ -1,0 +1,12 @@
+[Unit]
+Description=Run proxyfix when Clash config changes
+
+[Path]
+PathChanged=/home/jackz/.local/share/io.github.clash-verge-rev.clash-verge-rev/config.yaml
+PathChanged=/home/jackz/.local/share/io.github.clash-verge-rev.clash-verge-rev/clash-verge.yaml
+PathChanged=/home/jackz/.local/share/io.github.clash-verge-rev.clash-verge-rev/dns_config.yaml
+PathChanged=/home/jackz/.local/share/io.github.clash-verge-rev.clash-verge-rev/profiles/mrkG4UPD40Es.yaml
+PathChanged=/home/jackz/.local/share/io.github.clash-verge-rev.clash-verge-rev/profiles/RM0FPXAv4fiC.yaml
+
+[Install]
+WantedBy=paths.target

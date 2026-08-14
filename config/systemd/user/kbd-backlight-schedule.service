@@ -1,0 +1,6 @@
+[Unit]
+Description=Apply ThinkPad keyboard backlight day/night schedule
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/kbd-backlight-schedule apply

@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# One-shot seed ThinkPad → Mac Mini. Requires SSH (Remote Login) on Mac.
+set -euo pipefail
+
+MAC_IP="${MAC_IP:-10.69.10.101}"
+MAC_USER="${MAC_USER:-j4c1cz}"
+
+source "${HOME}/.config/omarchy/proxy.sh" 2>/dev/null || true
+proxy_off 2>/dev/null || true
+
+SSH_OPTS=(-o ConnectTimeout=10 -o BatchMode=yes -o IdentitiesOnly=yes)
+[[ -f "${HOME}/.ssh/id_ed25519" ]] && SSH_OPTS+=(-i "${HOME}/.ssh/id_ed25519")
+RSYNC_SSH="ssh ${SSH_OPTS[*]}"
+
+echo "Target: ${MAC_USER}@${MAC_IP}"
+ssh "${SSH_OPTS[@]}" "${MAC_USER}@${MAC_IP}" 'mkdir -p ~/Obsidian/J4c1c ~/Pictures ~/.hermes'
+
+echo "=== Obsidian vault (~12GB) ==="
+rsync -avh --progress -e "${RSYNC_SSH}" \
+  "${HOME}/Obsidian/J4c1c/" \
+  "${MAC_USER}@${MAC_IP}:~/Obsidian/J4c1c/"
+
+echo "=== Pictures ==="
+rsync -avh --progress -e "${RSYNC_SSH}" \
+  "${HOME}/Pictures/" \
+  "${MAC_USER}@${MAC_IP}:~/Pictures/"
+
+echo "=== Hermes home (no venv) ==="
+rsync -avh --progress -e "${RSYNC_SSH}" \
+  --exclude 'hermes-agent/venv' \
+  --exclude 'logs/*' \
+  --exclude 'state.db-wal' \
+  --exclude 'state.db-shm' \
+  "${HOME}/.hermes/" \
+  "${MAC_USER}@${MAC_IP}:~/.hermes/"
+
+echo "Done. On Mac: hermes setup && hermes gateway install"

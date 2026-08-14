@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Start Cursor Agent CLI in a scoped project workspace (never $HOME).
+set -euo pipefail
+BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$BIN_DIR/agent-lib.sh"
+
+dir="$(agent_resolve_dir "${1:-$PWD}")" || exit 1
+agent_refuse_home "$dir" || exit 1
+agent_warn_budget
+cd "$dir"
+extra=()
+if [[ $# -ge 1 ]]; then
+  shift
+  extra=("$@")
+fi
+exec agent --workspace "$dir" --trust "${extra[@]}"

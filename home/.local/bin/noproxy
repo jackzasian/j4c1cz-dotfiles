@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# noproxy — run a command with every proxy env var stripped from its environment.
+#
+# Clash exports ALL_PROXY=socks5://127.0.0.1:7897, and tools built on Node's
+# undici (Vercel CLI, some npm paths) reject that scheme outright:
+#   TypeError: Unsupported proxy protocol: socks5:
+# Most of them swallow it and print the useless "TypeError: fetch failed".
+#
+# This does not touch the current shell — only the child process. Use it for
+# anything that talks to an API that does not need the proxy:
+#   noproxy vercel env ls
+#   noproxy npm publish
+#
+# See also: `proxy_off` in ~/.config/omarchy/proxy.sh, which changes the whole
+# shell. Prefer this when you want one command unproxied.
+
+set -euo pipefail
+
+PROXY_VARS=(
+  HTTP_PROXY http_proxy
+  HTTPS_PROXY https_proxy
+  ALL_PROXY all_proxy
+  FTP_PROXY ftp_proxy
+  NO_PROXY no_proxy
+  NPM_CONFIG_PROXY npm_config_proxy
+  NPM_CONFIG_HTTPS_PROXY npm_config_https_proxy
+  PIP_PROXY
+)
+
+if [[ $# -eq 0 || ${1:-} == -h || ${1:-} == --help ]]; then
+  cat <<'EOF'
+usage: noproxy <command> [args...]
+
+Runs <command> with all proxy environment variables unset.
+
+examples:
+  noproxy vercel env ls
+  noproxy vercel deploy --prod
+  noproxy curl -sI https://api.vercel.com
+EOF
+  # No command to run is a usage error, but an explicit -h is not.
+  [[ $# -eq 0 ]] && exit 64
+  exit 0
+fi
+
+unset_args=()
+for var in "${PROXY_VARS[@]}"; do
+  unset_args+=(-u "$var")
+done
+
+# `env -u` on an already-unset variable is a no-op, so this is safe regardless
+# of which subset Clash happens to have exported.
+exec env "${unset_args[@]}" "$@"

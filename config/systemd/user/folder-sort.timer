@@ -1,0 +1,11 @@
+[Unit]
+Description=Run folder-sort every 3 days
+
+[Timer]
+# Days 1, 4, 7, 10 … of each month at 09:00
+OnCalendar=*-*-1/3 09:00:00
+OnBootSec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

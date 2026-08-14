@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Launch Stacher7 with system ffmpeg and Clash proxy for UI + yt-dlp downloads.
+set -euo pipefail
+
+STACHER_DIR="${HOME}/.stacher"
+source "${HOME}/.config/omarchy/proxy.sh" 2>/dev/null || true
+
+PORT=$(_clash_mixed_port 2>/dev/null || echo 7897)
+
+ensure_ffmpeg() {
+  mkdir -p "${STACHER_DIR}"
+  rm -f "${STACHER_DIR}/ffmpeg.zip" "${STACHER_DIR}/ffprobe.zip"
+
+  if [[ ! -x "${STACHER_DIR}/ffmpeg" ]]; then
+    ln -sf /usr/bin/ffmpeg "${STACHER_DIR}/ffmpeg"
+  fi
+  if [[ ! -x "${STACHER_DIR}/ffprobe" ]]; then
+    ln -sf /usr/bin/ffprobe "${STACHER_DIR}/ffprobe"
+  fi
+}
+
+ensure_ffmpeg
+
+if _clash_listening 2>/dev/null; then
+  proxy_on >/dev/null 2>&1 || true
+fi
+
+export PATH="${STACHER_DIR}:/usr/bin:/bin:${PATH:-}"
+
+PROXY_ARGS=()
+if _clash_listening 2>/dev/null; then
+  PROXY_ARGS=(--proxy-server="http://127.0.0.1:${PORT}")
+fi
+
+LAUNCH="uwsm-app -- /usr/bin/stacher7 ${PROXY_ARGS[*]}"
+exec omarchy-launch-or-focus "Stacher7" "$LAUNCH"

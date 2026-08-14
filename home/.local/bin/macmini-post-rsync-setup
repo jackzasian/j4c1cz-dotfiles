@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Run on ThinkPad AFTER macmini-migrate-rsync succeeds. Configures Mac Hermes via SSH.
+set -euo pipefail
+MAC_IP="${MAC_IP:-10.69.10.101}"
+MAC_USER="${MAC_USER:-j4c1cz}"
+
+ssh "${MAC_USER}@${MAC_IP}" bash -s <<'REMOTE'
+set -euo pipefail
+export HERMES_HOME="$HOME/.hermes"
+chmod 600 "$HERMES_HOME/.env" 2>/dev/null || true
+
+# Fix ThinkPad paths in config if present
+if [[ -f "$HERMES_HOME/config.yaml" ]]; then
+  sed -i.bak-migrate "s|/home/jackz|/Users/j4c1cz|g" "$HERMES_HOME/config.yaml" 2>/dev/null || \
+    sed -i '' "s|/home/jackz|/Users/j4c1cz|g" "$HERMES_HOME/config.yaml"
+fi
+
+if command -v brew &>/dev/null; then
+  eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"
+fi
+
+if [[ -x "$HERMES_HOME/hermes-agent/venv/bin/python" ]]; then
+  export PATH="$HERMES_HOME/hermes-agent/venv/bin:$PATH"
+elif command -v hermes &>/dev/null; then
+  :
+else
+  echo "Run hermes setup on Mac first if hermes CLI missing"
+fi
+
+hermes gateway install --force 2>/dev/null || hermes gateway install || true
+hermes gateway restart 2>/dev/null || true
+echo "Mac gateway status:"
+hermes gateway status 2>/dev/null | head -15 || true
+REMOTE
+
+echo "Stopping ThinkPad gateway (only one Discord bot)..."
+systemctl --user stop hermes-gateway
+systemctl --user disable hermes-gateway
+echo "ThinkPad hermes-gateway disabled. Test Discord on Mac."

@@ -1,0 +1,7 @@
+[Unit]
+Description=Watch Mac Hermes cron completions and refresh dashboard
+
+[Service]
+Type=oneshot
+ExecStart=%h/bin/hermes-dashboard-cron-watch.sh
+Environment=HOME=%h

@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# Dim/off Alienware AW510M RGB after hours; restore in the morning.
+
+set -euo pipefail
+
+CONFIG="${HOME}/.config/omarchy/aw510m-lights.conf"
+LIGHTS="${HOME}/.local/bin/aw510m-lights"
+
+NIGHT_MODE=off
+DAY_MODE=on
+DAY_R=255
+DAY_G=255
+DAY_B=255
+DAY_BRIGHT=100
+NIGHT_START=19:00
+DAY_START=07:00
+TIMEZONE=Asia/Shanghai
+
+if [[ -f ${CONFIG} ]]; then
+  # shellcheck disable=SC1090
+  source "${CONFIG}"
+fi
+
+to_minutes() {
+  local t="$1"
+  echo $((10#${t%%:*} * 60 + 10#${t##*:}))
+}
+
+is_night() {
+  local now_hm now_min night_min day_min
+  now_hm=$(TZ="${TIMEZONE}" date +%H:%M)
+  now_min=$(to_minutes "${now_hm}")
+  night_min=$(to_minutes "${NIGHT_START}")
+  day_min=$(to_minutes "${DAY_START}")
+
+  if (( night_min > day_min )); then
+    (( now_min >= night_min || now_min < day_min ))
+  else
+    (( now_min >= night_min && now_min < day_min ))
+  fi
+}
+
+apply_mode() {
+  local mode="$1"
+  if [[ ! -x ${LIGHTS} ]]; then
+    echo "aw510m-lights not found at ${LIGHTS}" >&2
+    return 1
+  fi
+  case "${mode}" in
+    off)
+      "${LIGHTS}" off
+      ;;
+    on)
+      "${LIGHTS}" on --bright "${DAY_BRIGHT}"
+      ;;
+    set)
+      "${LIGHTS}" set "${DAY_R}" "${DAY_G}" "${DAY_B}" --bright "${DAY_BRIGHT}"
+      ;;
+    *)
+      echo "Unknown mode: ${mode}" >&2
+      return 1
+      ;;
+  esac
+}
+
+night_mode() {
+  apply_mode "${NIGHT_MODE}"
+  echo "AW510M: night (${NIGHT_MODE})"
+}
+
+day_mode() {
+  apply_mode "${DAY_MODE}"
+  echo "AW510M: day (${DAY_MODE})"
+}
+
+case "${1:-apply}" in
+  night) night_mode ;;
+  day) day_mode ;;
+  apply)
+    if is_night; then
+      night_mode
+    else
+      day_mode
+    fi
+    ;;
+  status)
+    if is_night; then echo "mode=night want=${NIGHT_MODE}"; else echo "mode=day want=${DAY_MODE}"; fi
+    echo "now=$(TZ="${TIMEZONE}" date +%H:%M) night=${NIGHT_START} day=${DAY_START} tz=${TIMEZONE}"
+    ;;
+  *)
+    echo "Usage: aw510m-lights-schedule [apply|night|day|status]" >&2
+    exit 1
+    ;;
+esac

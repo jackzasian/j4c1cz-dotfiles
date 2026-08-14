@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Apply desk workspace split: 5–7 on laptop (eDP), rest on Studio (DP).
+set -euo pipefail
+
+LAPTOP_DESC='Samsung Display Corp. ATNA40HQ10-0  0x0000003F'
+STUDIO_DESC='Apple Computer Inc StudioDisplay 0x4E83B9D6'
+
+has_monitor() {
+  local re=$1
+  hyprctl monitors all -j 2>/dev/null | jq -e --arg re "$re" '
+    any(.[]; ((.description // "") | contains($re)) and (.disabled != true))
+  ' >/dev/null 2>&1
+}
+
+studio_up() { has_monitor 'StudioDisplay'; }
+laptop_up() { has_monitor 'ATNA40HQ10'; }
+
+move_ws() {
+  local ws=$1 mon=$2
+  hyprctl dispatch moveworkspacetomonitor "$ws" "$mon" >/dev/null 2>&1 || true
+}
+
+if studio_up && laptop_up; then
+  # Keep laptop LCD on for workspaces 5–7
+  echo on >"${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/laptop-display-want"
+  rm -f "$HOME/.local/state/omarchy/toggles/hypr/internal-monitor-disable.conf"
+
+  for ws in 5 6 7; do
+    move_ws "$ws" "desc:${LAPTOP_DESC}"
+  done
+  for ws in 1 2 3 4 8 9 10; do
+    move_ws "$ws" "desc:${STUDIO_DESC}"
+  done
+
+  # Ensure panel is lit
+  brightnessctl --device=intel_backlight set 100% >/dev/null 2>&1 || true
+  hyprctl dispatch dpms on eDP-1 >/dev/null 2>&1 || true
+  echo "workspaces-dock: 5–7 → laptop, 1–4/8–10 → Studio"
+elif laptop_up; then
+  # Undocked: all workspaces can live on eDP (rules fall back naturally)
+  echo "workspaces-dock: laptop only — no split"
+else
+  echo "workspaces-dock: no usable monitors" >&2
+  exit 1
+fi

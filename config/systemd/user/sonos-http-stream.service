@@ -1,0 +1,13 @@
+[Unit]
+Description=Sonos Roam HTTP MP3 stream server
+After=pipewire.service pipewire-pulse.service wireplumber.service
+Requires=pipewire-pulse.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/sonos-http-stream.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

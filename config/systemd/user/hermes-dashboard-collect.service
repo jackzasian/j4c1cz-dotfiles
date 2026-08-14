@@ -1,0 +1,7 @@
+[Unit]
+Description=Collect Hermes status from Mac Mini via SSH
+
+[Service]
+Type=oneshot
+ExecStart=%h/bin/hermes-dashboard-collect.sh
+Environment=HOME=%h

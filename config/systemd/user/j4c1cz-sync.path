@@ -1,0 +1,12 @@
+[Unit]
+Description=Watch Obsidian Publish/ for notes + photos (ThinkPad only)
+Documentation=file:///home/jackz/Developer/j4c1cz/docs/PUBLISH.md
+
+[Path]
+PathChanged=%h/Obsidian/J4c1c/Publish
+PathModified=%h/Obsidian/J4c1c/Publish
+Unit=j4c1cz-sync.service
+MakeDirectory=false
+
+[Install]
+WantedBy=paths.target

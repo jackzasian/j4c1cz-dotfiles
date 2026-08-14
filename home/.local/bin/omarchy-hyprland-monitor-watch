@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Local override: Omarchy's stock watch uses PATH; keep recover safe when docked.
+# Prefer this copy via Hyprland PATH (~/.local/bin first in envs-local.conf).
+set -euo pipefail
+
+SOCKET="${XDG_RUNTIME_DIR}/hypr/${HYPRLAND_INSTANCE_SIGNATURE}/.socket2.sock"
+INTERNAL="${HOME}/.local/bin/omarchy-hyprland-monitor-internal"
+MIRROR="${HOME}/.local/share/omarchy/bin/omarchy-hyprland-monitor-internal-mirror"
+
+[[ -x "$INTERNAL" ]] || INTERNAL="$(command -v omarchy-hyprland-monitor-internal)"
+
+socat -U - "UNIX-CONNECT:${SOCKET}" | while read -r event; do
+  case "$event" in
+    monitorremoved\>\>*|monitorremovedv2\>\>*)
+      # Absolute path — never the stock script that clears disable on false undock
+      "$INTERNAL" recover || true
+      if [[ -x "$MIRROR" ]]; then
+        "$MIRROR" recover || true
+      fi
+      ;;
+  esac
+done

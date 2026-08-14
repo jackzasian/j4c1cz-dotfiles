@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+# Watch a video on XREAL glasses — pick a file or pass a path.
+# Default: head-tracked VR cinema screen (works with normal MP4s).
+set -euo pipefail
+
+pick_file() {
+  local chosen
+  chosen=$(zenity --file-selection \
+    --title="Open video in VR" \
+    --file-filter='Video files | *.mp4 *.mkv *.avi *.webm *.mov *.m4v' \
+    --file-filter='All files | *' 2>/dev/null) || true
+  [[ -n $chosen && -f $chosen ]] || exit 0
+  printf '%s\n' "$chosen"
+}
+
+probe_size() {
+  local file=$1
+  if command -v ffprobe >/dev/null 2>&1; then
+    ffprobe -v error -select_streams v:0 -show_entries stream=width,height \
+      -of csv=p=0:s=x "$file" 2>/dev/null | head -1
+    return 0
+  fi
+  if command -v mediainfo >/dev/null 2>&1; then
+    mediainfo --Inform='Video;%Width%x%Height%' "$file" 2>/dev/null | head -1
+    return 0
+  fi
+  return 1
+}
+
+choose_mode() {
+  local file=$1
+  local base size w h ratio
+
+  base=$(basename "$file")
+  size=$(probe_size "$file" || true)
+
+  if [[ $base =~ [Ee]quirect|[Ss]phere|[_-]360[_-]|[_-]360\. ]]; then
+    echo vr360
+    return
+  fi
+
+  if [[ -n $size && $size == *x* ]]; then
+    w=${size%x*}
+    h=${size#*x}
+    if [[ $w =~ ^[0-9]+$ && $h =~ ^[0-9]+$ && $h -gt 0 ]]; then
+      ratio=$((w * 100 / h))
+      # ~32:9 SBS (3840x1080, 1920x540, etc.)
+      if (( ratio >= 320 && ratio <= 360 )) || (( w >= 3000 && h <= 1200 )); then
+        echo sbs
+        return
+      fi
+    fi
+  fi
+
+  shopt -s nocasematch
+  if [[ $base =~ (sbs|side.by.side|3d|FSBS|HSBS) ]]; then
+    shopt -u nocasematch
+    echo sbs
+    return
+  fi
+  shopt -u nocasematch
+
+  echo cinema
+}
+
+usage() {
+  cat <<'EOF'
+Usage: vr-video [options] [video.mp4]
+
+Watch a video on XREAL Air 2 glasses.
+
+With no file argument, opens a file picker.
+
+Options:
+  --cinema       VR cinema screen (default for normal MP4s)
+  --sbs          Side-by-side 3D on the glasses display
+  --180          180° head-tracked SBS
+  --360          360° equirectangular
+  --pick         Always show file picker
+  -h, --help     Show this help
+
+Examples:
+  vr-video ~/Videos/movie.mp4
+  vr-video --sbs ~/Videos/3d-movie.mp4
+  vr-video --180 ~/Videos/immersive.mp4
+
+Plug in the glasses via USB-C first. For SBS mode, hold brightness + for 3D.
+EOF
+}
+
+main() {
+  local mode=auto
+  local file=
+  local force_pick=false
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      -h|--help) usage; exit 0 ;;
+      --pick) force_pick=true ;;
+      --cinema|--flat) mode=cinema ;;
+      --sbs) mode=sbs ;;
+      --180) mode=vr180 ;;
+      --360) mode=vr360 ;;
+      -*) echo "Unknown option: $1" >&2; usage; exit 1 ;;
+      *)
+        if [[ -z $file ]]; then file=$1; else echo "Extra argument: $1" >&2; exit 1; fi
+        ;;
+    esac
+    shift
+  done
+
+  if [[ -z $file || $force_pick == true ]]; then
+    file=$(pick_file)
+    [[ -n $file ]] || exit 0
+  fi
+
+  [[ -f $file ]] || { echo "File not found: $file" >&2; exit 1; }
+
+  if [[ $mode == auto ]]; then
+    mode=$(choose_mode "$file")
+  fi
+
+  case $mode in
+    sbs)
+      exec xreal play-sbs "$file"
+      ;;
+    vr180)
+      exec xreal play-vr "$file" --180
+      ;;
+    vr360)
+      exec xreal play-vr "$file" --360
+      ;;
+    cinema)
+      exec xreal play "$file"
+      ;;
+    *)
+      echo "Unknown mode: $mode" >&2
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"

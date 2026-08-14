@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+"""Local Google-style geolocation mock for Firefox/Zen (accepts GET/POST).
+
+Reads coords from ~/.config/omarchy/location.conf and reloads on each request
+so omarchy-set-geolocation can update without restarting this process.
+"""
+from __future__ import annotations
+
+import json
+import os
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
+LOC = Path.home() / ".config/omarchy/location.conf"
+HOST = "127.0.0.1"
+PORT = int(os.environ.get("OMARCHY_GEO_MOCK_PORT", "17322"))
+
+
+def read_location() -> tuple[float, float, float]:
+    lat, lon, acc = 29.8782, 121.5494, 100.0
+    if not LOC.is_file():
+        return lat, lon, acc
+    data: dict[str, str] = {}
+    for line in LOC.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        data[k.strip()] = v.strip()
+    try:
+        lat = float(data.get("latitude", lat))
+        lon = float(data.get("longitude", lon))
+        acc = float(data.get("accuracy", acc))
+    except ValueError:
+        pass
+    return lat, lon, acc
+
+
+class Handler(BaseHTTPRequestHandler):
+    def log_message(self, fmt: str, *args) -> None:  # quieter journal
+        return
+
+    def _reply(self) -> None:
+        lat, lon, acc = read_location()
+        body = json.dumps(
+            {"location": {"lat": lat, "lng": lon}, "accuracy": acc}
+        ).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_OPTIONS(self) -> None:  # noqa: N802
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "*")
+        self.end_headers()
+
+    def do_GET(self) -> None:  # noqa: N802
+        self._reply()
+
+    def do_POST(self) -> None:  # noqa: N802
+        length = int(self.headers.get("Content-Length", "0") or 0)
+        if length:
+            self.rfile.read(length)
+        self._reply()
+
+
+def main() -> None:
+    server = ThreadingHTTPServer((HOST, PORT), Handler)
+    print(f"omarchy-geo-mock listening on http://{HOST}:{PORT}", flush=True)
+    server.serve_forever()
+
+
+if __name__ == "__main__":
+    main()

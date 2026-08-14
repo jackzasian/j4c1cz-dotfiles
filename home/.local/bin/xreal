@@ -1,0 +1,230 @@
+#!/usr/bin/env bash
+# XREAL Air 2 video playback on Omarchy/Hyprland — simple SBS 3D + OpenXR VR.
+set -euo pipefail
+
+# shellcheck source=/dev/null
+source "${HOME}/.local/lib/xreal/common.sh"
+
+MPV_XR="${HOME}/.local/bin/mpv-xr"
+MPV_XR_SRC="${HOME}/Developer/XREAL/mpv-xr-src"
+OPENXR_RUNTIME="${XR_RUNTIME_JSON:-/usr/share/openxr/1/openxr_monado.json}"
+
+usage() {
+  cat <<'EOF'
+Usage: xreal <command> [args]
+
+Commands:
+  status                 Show glasses, driver, and OpenXR stack status
+  setup                  Extend desktop to XREAL display (Hyprland)
+  play <video>           Fullscreen on the XREAL glasses display (normal MP4)
+  play-sbs <video>       Side-by-side 3D on the glasses display (hold brightness +)
+  play-vr <video>        Head-tracked VR via mpv-xr (experimental on Wayland)
+  install                Install Monado, xr-driver, build mpv-xr (needs sudo once)
+
+Quick tool: vr-video [movie.mp4]   — file picker, plays on glasses by default
+App: xreal-cinema                  — launch from app menu (laptop display off)
+Travel: xreal-travel on|off        — battery saver + disable laptop panel
+Library: xreal-library [--app]     — offline library picker
+Kodi: xreal-kodi                   — Netflix-like UI for local files
+Steam: xreal-steam                 — Big Picture on glasses
+
+Simple 3D (play-sbs):
+  1. Plug in XREAL Air 2 via USB-C
+  2. xreal setup
+  3. xreal play-sbs /path/to/video_SBS.mp4
+  4. Hold brightness + on the glasses to toggle 3D mode
+
+Full VR (play-vr):
+  Run `xreal install` once, plug in glasses, then:
+  xreal play-vr /path/to/video.mp4 [--180|--360|--flat] [--ou]
+
+Examples:
+  xreal play-sbs movie.3840x1080.mkv
+  xreal play-vr clip.mp4 --180
+  xreal play-vr sphere.mkv --360 --ou
+EOF
+}
+
+cmd_status() {
+  echo "=== Displays ==="
+  hyprctl monitors 2>/dev/null || echo "(hyprctl unavailable)"
+  echo
+  local mon
+  mon=$(xreal_find_monitor || true)
+  if [[ -n $mon ]]; then
+    echo "XREAL monitor: $mon"
+  else
+    echo "XREAL monitor: not detected"
+  fi
+  echo
+  echo "=== XR stack ==="
+  for bin in monado-service xr_driver_cli mpv-xr; do
+    if command -v "$bin" >/dev/null 2>&1; then
+      echo "$bin: $(command -v "$bin")"
+    else
+      echo "$bin: missing"
+    fi
+  done
+  echo "OpenXR runtime: ${OPENXR_RUNTIME}"
+  [[ -f $OPENXR_RUNTIME ]] && echo "  (file exists)" || echo "  (file missing — run xreal install)"
+  echo
+  if systemctl --user is-active xr-driver.service &>/dev/null; then
+    echo "xr-driver.service: active"
+  elif systemctl --user is-enabled xr-driver.service &>/dev/null; then
+    echo "xr-driver.service: enabled but not running"
+  else
+    echo "xr-driver.service: not enabled"
+  fi
+  if lsusb 2>/dev/null | grep -qiE 'xreal|nreal|3318:0420|3318:0421|3318:0422|3318:0432'; then
+    echo "USB: XREAL device present"
+  else
+    echo "USB: no XREAL USB device (display-only mode may still work over USB-C DP)"
+  fi
+}
+
+cmd_setup() {
+  local mon
+  mon=$(xreal_require_glasses)
+  xreal_sync_window_rules
+  xreal_apply_display
+  xreal_notify "XREAL" "Using display $mon at native 1080p (scale 1)."
+  echo "Detected XREAL on $mon (1920x1080, scale 1)"
+  echo "If the image is duplicated instead of extended, open Omarchy display settings."
+}
+
+guess_vr_mode() {
+  local file=$1
+  local base
+  base=$(basename "$file")
+  local mode=180
+  local layout=sbs
+  shopt -s nocasematch
+  if [[ $base =~ (360|equirect|sphere) ]]; then mode=360; fi
+  if [[ $base =~ (_ou|overunder|over.under|_TB|topbottom) ]]; then layout=ou; fi
+  if [[ $base =~ (_flat|_2d|cinema) ]]; then mode=flat; fi
+  shopt -u nocasematch
+  printf '%s %s\n' "$mode" "$layout"
+}
+
+cmd_play_on_glasses() {
+  local file=${1:-}
+  local mode=${2:-normal}
+  [[ -n $file && -f $file ]] || { echo "Usage: xreal play <video-file>" >&2; exit 1; }
+
+  local mon
+  mon=$(xreal_require_glasses)
+  xreal_travel_maybe_on
+  xreal_sync_window_rules
+  xreal_apply_display
+
+  xreal_xr_disable
+  xreal_focus_glasses "$mon"
+
+  xreal_notify "XREAL" "Playing on ${mon}"
+  echo "Playing on XREAL display ${mon} (not your main monitor)."
+  if [[ $mode == sbs ]]; then
+    echo "Hold the brightness + button on the glasses for side-by-side 3D."
+  fi
+
+  local -a mpv_args=(
+    --force-window
+    --keep-open=yes
+    --title=xreal-player
+    --keepaspect=yes
+    --hwdec=vaapi
+    --msg-level=ffmpeg/video=error
+  )
+
+  if [[ $mode == sbs ]]; then
+    mpv_args+=(--panscan=1.0)
+  fi
+
+  uwsm-app -- mpv "${mpv_args[@]}" "$file" &
+  local mpv_pid=$!
+
+  xreal_move_player_to_glasses "$mon" || {
+    echo "Warning: could not fullscreen mpv on ${mon}" >&2
+  }
+
+  wait "$mpv_pid"
+  xreal_xr_disable
+}
+
+cmd_play() {
+  cmd_play_on_glasses "$1" normal
+}
+
+cmd_play_sbs() {
+  cmd_play_on_glasses "$1" sbs
+}
+
+cmd_play_vr() {
+  local file=${1:-}
+  shift || true
+  [[ -n $file && -f $file ]] || { echo "Usage: xreal play-vr <video> [--180|--360|--flat] [--ou]" >&2; exit 1; }
+
+  if [[ ! -x $MPV_XR ]]; then
+    echo "mpv-xr not installed. Run: xreal install" >&2
+    exit 1
+  fi
+  if [[ ! -f $OPENXR_RUNTIME ]]; then
+    echo "OpenXR runtime missing. Run: xreal install" >&2
+    exit 1
+  fi
+
+  local mode layout
+  read -r mode layout <<< "$(guess_vr_mode "$file")"
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --180) mode=180 ;;
+      --360) mode=360 ;;
+      --flat) mode=flat ;;
+      --ou) layout=ou ;;
+      --sbs) layout=sbs ;;
+      *) echo "Unknown option: $1" >&2; exit 1 ;;
+    esac
+    shift
+  done
+
+  systemctl --user start xr-driver.service 2>/dev/null || true
+  export XR_RUNTIME_JSON="$OPENXR_RUNTIME"
+  xreal_xr_enable_vr
+
+  local -a args=(-l "$layout")
+  case $mode in
+    360) args=(-p equirectangular -f 360 "${args[@]}") ;;
+    flat) args=(-p flat -f 70 "${args[@]}") ;;
+    *) args=(-p flat -f 180 "${args[@]}") ;;
+  esac
+
+  xreal_notify "XREAL VR" "Head-tracked playback ($mode, $layout)"
+  echo "Starting mpv-xr: mode=$mode layout=$layout"
+  echo "Recenter: double-tap the top of the glasses frame (xr-driver)."
+  "$MPV_XR" "${args[@]}" "$file"
+  xreal_xr_disable
+}
+
+cmd_install() {
+  exec "${HOME}/Developer/XREAL/install.sh"
+}
+
+main() {
+  local cmd=${1:-}
+  shift || true
+  case $cmd in
+    status) cmd_status "$@" ;;
+    setup) cmd_setup "$@" ;;
+    play) cmd_play "$@" ;;
+    play-sbs) cmd_play_sbs "$@" ;;
+    play-vr) cmd_play_vr "$@" ;;
+    install) cmd_install "$@" ;;
+    -h|--help|help|"") usage ;;
+    *)
+      echo "Unknown command: $cmd" >&2
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"

@@ -1,0 +1,11 @@
+[Unit]
+Description=Sync new Zen Browser bookmarks into Obsidian Links inbox
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/zen-links-sync
+# Always try to push Links/ after sync (no-op if nothing changed)
+ExecStartPost=%h/.local/bin/obsidian-links-github-push
+Environment=HOME=%h
+Environment=http_proxy=http://127.0.0.1:7897
+Environment=https_proxy=http://127.0.0.1:7897

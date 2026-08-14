@@ -1,0 +1,12 @@
+[Unit]
+Description=XR user-space driver
+After=network.target
+
+[Service]
+Type=simple
+Environment=LD_LIBRARY_PATH=/home/jackz/.local/share/xr_driver/lib
+ExecStart=/home/jackz/.local/bin/xrDriver
+Restart=always
+
+[Install]
+WantedBy=default.target

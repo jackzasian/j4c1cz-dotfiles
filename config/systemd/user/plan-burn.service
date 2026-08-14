@@ -1,0 +1,7 @@
+[Unit]
+Description=Plan-token burn window (vault agent spawn)
+
+[Service]
+Type=oneshot
+Environment=PATH=%h/.local/bin:%h/.local/share/mise/shims:/usr/local/bin:/usr/bin
+ExecStart=%h/.local/bin/plan-burn

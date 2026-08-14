@@ -1,0 +1,7 @@
+[Unit]
+Description=Proxyfix — detect and repair Clash proxy settings
+
+[Service]
+Type=oneshot
+ExecStart=/home/jackz/Developer/Proxyfix/bin/proxyfix-guard
+Environment=HOME=/home/jackz

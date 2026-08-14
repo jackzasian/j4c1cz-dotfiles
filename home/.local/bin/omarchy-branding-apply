@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# Generate and apply personal Omarchy branding (ASCII art + login logo).
+
+set -euo pipefail
+
+BRANDING_DIR="${HOME}/.config/omarchy/branding"
+NAME_FILE="${BRANDING_DIR}/name"
+FONT="/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Bold.ttf"
+TEXT_COLOR="#c2c2b0"
+
+read_name() {
+  if [[ -f ${NAME_FILE} ]]; then
+    tr -d '[:space:]' <"${NAME_FILE}"
+  else
+    echo "J4c1cZ"
+  fi
+}
+
+generate_assets() {
+  local name="$1"
+  local src="${BRANDING_DIR}/login-src.png"
+  local login="${BRANDING_DIR}/login.png"
+  local banner="${BRANDING_DIR}/about-banner.txt"
+
+  mkdir -p "${BRANDING_DIR}"
+
+  if [[ -f ${banner} ]]; then
+    cp "${banner}" "${BRANDING_DIR}/about.txt"
+  elif command -v figlet >/dev/null; then
+    figlet -f standard "${name}" >"${BRANDING_DIR}/about.txt"
+  fi
+
+  magick -background none -fill "${TEXT_COLOR}" -font "${FONT}" -pointsize 180 \
+    "label:${name}" -trim +repage -bordercolor none -border 30 "${src}"
+
+  magick "${src}" -resize 780x "${login}"
+
+  omarchy-transcode-ascii "${src}" "${BRANDING_DIR}/screensaver.txt" \
+    --width 80 --mode braille --invert
+}
+
+apply_login_assets() {
+  local login="${BRANDING_DIR}/login.png"
+  [[ -f ${login} ]] || return 0
+
+  if [[ -f /usr/share/sddm/themes/omarchy/logo.png ]]; then
+    sudo cp "${login}" /usr/share/sddm/themes/omarchy/logo.png
+  fi
+
+  if [[ -f /usr/share/plymouth/themes/omarchy/logo.png ]]; then
+    sudo cp "${login}" /usr/share/plymouth/themes/omarchy/logo.png
+  fi
+
+  if [[ -d /usr/share/plymouth/themes/omarchy/logos ]]; then
+    sudo cp "${login}" /usr/share/plymouth/themes/omarchy/logos/logo.png 2>/dev/null || true
+  fi
+}
+
+NAME=$(read_name)
+[[ -n ${NAME} ]] || {
+  echo "Branding name is empty (${NAME_FILE})" >&2
+  exit 1
+}
+
+generate_assets "${NAME}"
+apply_login_assets
+
+echo "Branding applied for: ${NAME}"
+echo "  about.txt       -> fastfetch"
+echo "  screensaver.txt -> screensaver"
+echo "  login.png       -> SDDM + Plymouth"

@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# omarchy:summary=Start Persona-Quickshell for this session (hides swaybg wallpaper)
+set -euo pipefail
+
+PERSONA_DIR="${HOME}/.config/quickshell/persona"
+STATE_DIR="${HOME}/.local/state/omarchy/toggles"
+TOGGLE="${STATE_DIR}/persona-quickshell-on"
+
+"${HOME}/.local/bin/persona-quickshell-install"
+
+mkdir -p "${STATE_DIR}"
+touch "${TOGGLE}"
+
+pkill -x swaybg 2>/dev/null || true
+pkill -f "qs -c ${PERSONA_DIR}" 2>/dev/null || true
+
+if ! pgrep -f "qs -c ${PERSONA_DIR}" >/dev/null 2>&1; then
+  uwsm-app -- qs -c "${PERSONA_DIR}" &
+  sleep 1
+fi
+
+if pgrep -f "qs -c ${PERSONA_DIR}" >/dev/null 2>&1; then
+  echo "Persona Quickshell is running."
+else
+  echo "Persona Quickshell failed to start — check: qs -c ${PERSONA_DIR}" >&2
+  exit 1
+fi
+
+echo ""
+echo "Super+R  → app search (after persona-quickshell-enable, or bind manually)"
+echo "Revert   → persona-quickshell-revert"

@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# hermes-model — OpenRouter cost tiers (default = V4 Pro for smarter tasks)
+set -euo pipefail
+
+DEFAULT="deepseek/deepseek-v4-pro"
+CHEAP="deepseek/deepseek-v4-flash"
+FLASH="google/gemini-2.0-flash-lite-001"
+PRO="qwen/qwen3-coder"
+EXPENSIVE="moonshotai/kimi-k2.6"
+PARETO="openrouter/pareto-code"
+CONFIG="${HOME}/.hermes/config.yaml"
+cmd="${1:-status}"
+
+_current() {
+  python3 - "$CONFIG" <<'PY' 2>/dev/null || true
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+try:
+    import yaml
+    m = (yaml.safe_load(path.read_text()) or {}).get("model") or {}
+    print("%s / %s" % (m.get("provider", "?"), m.get("default", "?")))
+except Exception:
+    provider = default = "?"
+    in_model = False
+    for line in path.read_text().splitlines():
+        if line.startswith("model:"):
+            in_model = True
+            continue
+        if in_model and line and not line.startswith((" ", "\t")):
+            break
+        if in_model and line.strip().startswith("provider:"):
+            provider = line.split(":", 1)[1].strip()
+        if in_model and line.strip().startswith("default:"):
+            default = line.split(":", 1)[1].strip()
+    print("%s / %s" % (provider, default))
+PY
+}
+
+_set_or() {
+  local model="$1"
+  python3 - "$model" "$CONFIG" <<'PY'
+import sys
+from pathlib import Path
+model, path = sys.argv[1], Path(sys.argv[2])
+try:
+    import yaml
+    cfg = yaml.safe_load(path.read_text()) or {}
+    m = cfg.setdefault("model", {})
+    m.update({
+        "provider": "openrouter",
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_mode": "chat_completions",
+        "default": model,
+    })
+    cfg.setdefault("provider_routing", {})["sort"] = "price"
+    path.write_text(yaml.safe_dump(cfg, sort_keys=False, allow_unicode=True))
+except Exception:
+    lines = path.read_text().splitlines()
+    out, in_model = [], False
+    for line in lines:
+        if line.startswith("model:"):
+            in_model = True
+            out.append(line)
+            continue
+        if in_model and line and not line.startswith((" ", "\t")):
+            in_model = False
+        if in_model and line.strip().startswith("default:"):
+            out.append("  default: %s" % model)
+            continue
+        if in_model and line.strip().startswith("provider:"):
+            out.append("  provider: openrouter")
+            continue
+        out.append(line)
+    path.write_text("\n".join(out) + "\n")
+print(model)
+PY
+}
+
+case "$cmd" in
+  default|d|mid|m|smart|pro-default) _set_or "$DEFAULT"; echo "Smarter default: $DEFAULT" ;;
+  cheap|c|flash-v4) _set_or "$CHEAP"; echo "Cheap Flash: $CHEAP" ;;
+  flash|f|free) _set_or "$FLASH"; echo "Ultra-cheap: $FLASH" ;;
+  pro|coder) _set_or "$PRO"; echo "Coding specialist: $PRO" ;;
+  expensive|e|premium|p|kimi) _set_or "$EXPENSIVE"; echo "Expensive: $EXPENSIVE" ;;
+  pareto|auto) _set_or "$PARETO"; echo "Pareto: $PARETO" ;;
+  status|s|"")
+    echo "Current default: $(_current)"
+    echo ""
+    echo "  hermes-model default   → $DEFAULT  (smarter tasks)"
+    echo "  hermes-model cheap     → $CHEAP"
+    echo "  hermes-model flash     → $FLASH"
+    echo "  hermes-model pro       → $PRO"
+    echo "  hermes-model expensive → $EXPENSIVE"
+    echo "  hermes-model pareto    → $PARETO"
+    echo ""
+    echo "In-session: /model <name>"
+    ;;
+  *) echo "Usage: hermes-model [default|cheap|flash|pro|expensive|pareto|status]"; exit 1 ;;
+esac

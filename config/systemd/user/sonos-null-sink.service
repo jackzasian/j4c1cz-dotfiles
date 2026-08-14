@@ -1,0 +1,11 @@
+[Unit]
+Description=Ensure Sonos Roam null sink exists
+After=pipewire-pulse.service
+Requires=pipewire-pulse.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/sonos-null-sink.sh
+
+[Install]
+WantedBy=default.target

@@ -50,3 +50,8 @@ patch_runtime() {
 
 patch_config_file
 patch_runtime || true
+
+# Homelab over Tailscale must not go through Clash (life-dash / hermes / ollama).
+if [[ -x $HOME/.local/bin/clash-tailscale-bypass ]]; then
+  "$HOME/.local/bin/clash-tailscale-bypass" || true
+fi

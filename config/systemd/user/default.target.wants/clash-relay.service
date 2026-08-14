@@ -1,0 +1,13 @@
+[Unit]
+Description=Clash Tailscale relay for Mac Mini
+After=tailscaled.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/socat TCP-LISTEN:7898,bind=100.81.159.105,fork,reuseaddr TCP:127.0.0.1:7897
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

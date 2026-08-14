@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Launch default browser (Zen) with Clash PAC.
+# Strava (and related CDNs) go DIRECT so IP/location is not Tokyo via proxy;
+# everything else uses Clash mixed port.
+set -euo pipefail
+
+source "${HOME}/.config/omarchy/proxy.sh" 2>/dev/null || true
+
+PORT=$(_clash_mixed_port 2>/dev/null || echo 7897)
+PAC="file://${HOME}/.config/omarchy/clash-proxy.pac"
+ZEN=/opt/zen-browser-bin/zen-bin
+
+if ! _clash_listening 2>/dev/null; then
+  notify-send -u critical "Browser" "Start Clash Verge first — browser needs proxy on 127.0.0.1:${PORT}." 2>/dev/null || \
+    echo "Start Clash Verge first — browser needs proxy on 127.0.0.1:${PORT}" >&2
+fi
+
+args=()
+for arg in "$@"; do
+  [[ $arg != --private ]] && args+=("$arg")
+done
+
+# Prefer PAC over --proxy-server so Strava is not geo-located at the proxy exit.
+exec setsid uwsm-app -- "$ZEN" "--proxy-pac-url=${PAC}" "${args[@]}"

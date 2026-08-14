@@ -1,0 +1,6 @@
+[Unit]
+Description=Regenerate hyprsunset Flux schedule from sun times
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/hyprsunset-flux-schedule

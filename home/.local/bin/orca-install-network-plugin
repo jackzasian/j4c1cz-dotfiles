@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Install open-bambu-networking plugin for Orca Slicer (LAN device pairing/printing).
+
+set -euo pipefail
+
+REPO="${OBN_REPO:-https://github.com/ClusterM/open-bambu-networking.git}"
+SRC="${OBN_SRC:-/tmp/open-bambu-networking}"
+PLUGIN_VERSION="${OBN_VERSION:-02.03.00.62}"
+JOBS="${JOBS:-$(nproc)}"
+
+if pgrep -f '/usr/lib/OrcaSlicer/orca-slicer' >/dev/null; then
+  echo "Closing Orca Slicer first..."
+  pkill -f '/usr/lib/OrcaSlicer/orca-slicer' || true
+  sleep 1
+fi
+
+if [[ -f ${HOME}/.config/omarchy/proxy.sh ]]; then
+  # shellcheck disable=SC1091
+  source "${HOME}/.config/omarchy/proxy.sh"
+  proxy_on 2>/dev/null || true
+fi
+
+need() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "Missing dependency: $1" >&2
+    exit 1
+  }
+}
+
+for dep in git cmake make pkg-config g++; do
+  need "$dep"
+done
+
+if [[ -d ${SRC}/.git ]]; then
+  git -C "${SRC}" pull --ff-only
+else
+  rm -rf "${SRC}"
+  git clone --depth 1 "${REPO}" "${SRC}"
+fi
+
+cd "${SRC}"
+./configure --client-type=orca_slicer --with-version="${PLUGIN_VERSION}"
+make -j"${JOBS}"
+make install
+
+echo
+echo "Installed network plugin to ~/.config/OrcaSlicer/plugins/"
+echo "Restart Orca Slicer, then Device → Bind with access code (printer IP + LAN code)."
+echo "Printer must be in Developer/LAN mode."

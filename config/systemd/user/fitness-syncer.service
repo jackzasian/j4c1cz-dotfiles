@@ -1,0 +1,14 @@
+[Unit]
+Description=FitnessSyncer local data sync for AI agents
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-%h/.config/fitness-syncer/env
+WorkingDirectory=%h/Developer/j4c1cz/fitness-syncer
+ExecStart=/usr/bin/python3 -m fitness_syncer sync
+Nice=10
+
+[Install]
+WantedBy=default.target

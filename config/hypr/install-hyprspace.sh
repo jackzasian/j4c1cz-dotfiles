@@ -1,5 +1,5 @@
 #!/bin/bash
-# Hyprspace for Hyprland 0.55 — upstream KZDKM/main does not build; use 0xl30's 0.55 fork.
+# Hyprspace for Hyprland 0.56 — 0xl30 fork (upstream KZDKM pins stop earlier).
 # Run in your Hyprland session: bash ~/.config/hypr/install-hyprspace.sh
 set -euo pipefail
 
@@ -18,24 +18,44 @@ if ! hyprctl version &>/dev/null; then
   exit 1
 fi
 
+# Already healthy — do not remove/rebuild (avoids safe-mode loops)
+if hyprctl plugin list 2>/dev/null | grep -qi hyprspace; then
+  ERR=$(hyprctl configerrors 2>/dev/null || true)
+  if [[ -z ${ERR//[[:space:]]/} ]]; then
+    echo "OK: Hyprspace already loaded and configerrors empty — skipping rebuild."
+    echo "Overview binds must stay as: exec, hyprctl dispatch overview:toggle"
+    exit 0
+  fi
+  echo "WARN: Hyprspace loaded but configerrors present — continuing repair."
+  echo "$ERR"
+fi
+
+if ! pacman -Q hyprland-protocols &>/dev/null; then
+  echo "ERROR: hyprland-protocols not installed (needed for hyprpm headers)."
+  echo "Install: sudo pacman -S --needed hyprland-protocols"
+  exit 1
+fi
+
 echo "--- remove hyprtasking ---"
 yes | hyprpm -f disable hyprtasking 2>/dev/null || true
 yes | hyprpm -f remove hyprtasking 2>/dev/null || true
 
-echo "--- remove broken upstream Hyprspace repo (if any) ---"
+echo "--- remove existing Hyprspace repo (if any) ---"
 yes | hyprpm -f disable Hyprspace 2>/dev/null || true
 yes | hyprpm -f remove Hyprspace 2>/dev/null || true
 
-# PR #230: Hyprland v0.55 API compatibility (0xl30 fork)
+# Fix For Hyprland v0.56.0 (0xl30 / ImanolBarba)
 HYPRSPACE_URL="https://github.com/0xl30/Hyprspace"
-HYPRSPACE_COMMIT="628d88122ac5ded7334618e516fed4dd227edc6e"
+HYPRSPACE_COMMIT="8b4284e123bd"
 
-echo "--- add Hyprspace (0.55 fork) ---"
+echo "--- ensure hyprpm headers ---"
+hyprpm update -f 2>/dev/null || true
+
+echo "--- add Hyprspace (0.56 fork) ---"
 yes | hyprpm -f add "${HYPRSPACE_URL}" "${HYPRSPACE_COMMIT}"
 
 echo "--- enable Hyprspace (note capital H) ---"
 yes | hyprpm -f enable Hyprspace
-hyprpm -f update 2>/dev/null || hyprpm update -f 2>/dev/null || true
 hyprpm reload -n
 
 echo "--- plugin list ---"
@@ -50,13 +70,6 @@ if ! hyprctl plugin list 2>/dev/null | grep -qi hyprspace; then
   exit 1
 fi
 
-HYPR_CONF="${HOME}/.config/hypr/hyprland.conf"
-if grep -q '^# source = ~/.config/hypr/hyprspace-binds.conf' "$HYPR_CONF"; then
-  sed -i 's|^# source = ~/.config/hypr/hyprspace-binds.conf|source = ~/.config/hypr/hyprspace-binds.conf|' "$HYPR_CONF"
-  echo "Enabled hyprspace-binds.conf in hyprland.conf"
-fi
-
-hyprctl reload
 ERR=$(hyprctl configerrors)
 echo "--- configerrors ---"
 echo "${ERR:-(none)}"
@@ -64,4 +77,4 @@ if [ -n "$ERR" ]; then
   exit 1
 fi
 
-echo "OK: Hyprspace loaded. Super+\` or 4-finger up for overview."
+echo "OK: Hyprspace loaded. Super+\` uses exec+hyprctl (see bindings.conf)."

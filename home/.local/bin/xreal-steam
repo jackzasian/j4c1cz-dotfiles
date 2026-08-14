@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Steam Big Picture on XREAL via xr-driver virtual display.
+set -euo pipefail
+
+# shellcheck source=/dev/null
+source "${HOME}/.local/lib/xreal/common.sh"
+
+XR_CLI="${HOME}/.local/bin/xr_driver_cli"
+CALIBRATION_WAIT="${XREAL_STEAM_CALIBRATION_WAIT:-20}"
+
+wait_for_calibration() {
+  local i
+  for ((i = 0; i < CALIBRATION_WAIT; i++)); do
+    if journalctl --user -u xr-driver.service -n 30 --no-pager 2>/dev/null \
+      | grep -q 'Device calibration complete'; then
+      return 0
+    fi
+    sleep 1
+  done
+}
+
+cmd_launch() {
+  local mon
+  mon=$(xreal_app_prepare) || {
+    xreal_app_error "No XREAL glasses detected.\n\nPlug in via USB-C first."
+    exit 1
+  }
+
+  if ! command -v steam >/dev/null 2>&1; then
+    xreal_app_error "Steam is not installed."
+    exit 1
+  fi
+  if [[ ! -x $XR_CLI ]]; then
+    xreal_app_error "XR driver not found.\n\nRun: xreal install"
+    exit 1
+  fi
+
+  hyprctl reload >/dev/null 2>&1 || true
+
+  "$XR_CLI" -e
+  systemctl --user start xr-driver.service 2>/dev/null || true
+  "$XR_CLI" --virtual-display
+
+  zenity --info --title="XREAL Steam" \
+    --text="Calibrating head tracking (~15s).\nMove your head slightly if this is the first plug-in today." \
+    --timeout=3 2>/dev/null || true
+  wait_for_calibration
+
+  xreal_notify "XREAL Steam" "Launching Big Picture on ${mon}"
+  if uwsm-app -- steam -gamepadui; then
+    return 0
+  fi
+
+  exec uwsm-app -- steam -tenfoot
+}
+
+usage() {
+  cat <<'EOF'
+Usage: xreal-steam
+
+Launch Steam Big Picture on XREAL glasses. Opens from app menu: XREAL Steam
+EOF
+}
+
+main() {
+  case ${1:-} in
+    -h|--help|help|"") cmd_launch ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"

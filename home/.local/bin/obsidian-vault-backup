@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Push Obsidian vault to GitHub when there are changes.
+
+set -euo pipefail
+
+VAULT="${HOME}/Obsidian/J4c1c"
+BRANCH="${OBSIDIAN_VAULT_BRANCH:-main}"
+REMOTE="${OBSIDIAN_VAULT_REMOTE:-origin}"
+LOG="${HOME}/.cache/obsidian-vault-backup.log"
+LOCK="${HOME}/.cache/obsidian-vault-backup.lock"
+
+mkdir -p "$(dirname "${LOG}")"
+
+exec 9>"${LOCK}"
+if ! flock -n 9; then
+  echo "obsidian-vault-backup: already running" >&2
+  exit 0
+fi
+
+{
+  echo "=== $(date -Iseconds) ==="
+
+  if [[ ! -d ${VAULT}/.git ]]; then
+    echo "ERROR: ${VAULT} is not a git repository"
+    exit 1
+  fi
+
+  if [[ -f ${HOME}/.config/omarchy/proxy.sh ]]; then
+    # shellcheck disable=SC1091
+    source "${HOME}/.config/omarchy/proxy.sh"
+    proxy_on 2>/dev/null || true
+  fi
+
+  cd "${VAULT}"
+  git add -A
+
+  if git diff --staged --quiet; then
+    echo "No changes to backup"
+    exit 0
+  fi
+
+  git commit -m "vault backup: $(date '+%Y-%m-%d %H:%M:%S')"
+  git push "${REMOTE}" "${BRANCH}"
+  echo "Pushed to ${REMOTE}/${BRANCH}"
+} >>"${LOG}" 2>&1

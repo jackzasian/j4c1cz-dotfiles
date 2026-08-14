@@ -1,0 +1,16 @@
+[Unit]
+Description=omarchy-services job: %i (docker compose run)
+After=docker.service network-online.target
+Wants=network-online.target
+ConditionACPower=true
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/jackz/Developer/omarchy-services
+EnvironmentFile=-/home/jackz/Developer/omarchy-services/.env
+Environment=SSH_AUTH_SOCK=%t/ssh-agent.sock
+ExecStart=/usr/bin/docker compose --profile jobs run --rm --remove-orphans %i
+TimeoutStartSec=30min
+
+[Install]
+WantedBy=default.target

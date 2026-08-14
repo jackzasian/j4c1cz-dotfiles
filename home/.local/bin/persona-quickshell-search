@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# omarchy:summary=Toggle Persona app search panel (same as Super+R when enabled)
+set -euo pipefail
+qs -c "${HOME}/.config/quickshell/persona" ipc call searchapp toggle

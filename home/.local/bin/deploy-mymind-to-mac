@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+# Deploy Hermes Mind capture + sync to the Mac Mini (Discord gateway host).
+# Run from ThinkPad: ~/.local/bin/deploy-mymind-to-mac
+set -euo pipefail
+
+MAC="${MAC_HOST:-j4c1cz@10.69.10.101}"
+PLUGIN_SRC="${HOME}/.hermes/plugins/mymind/"
+SYNC_SRC="${HOME}/.local/bin/mymind-sync"
+ENV_SRC="${HOME}/.config/mymind/env"
+
+echo "==> rsync plugin → ${MAC}"
+rsync -av --delete "${PLUGIN_SRC}" "${MAC}:.hermes/plugins/mymind/"
+
+echo "==> copy sync script + env"
+scp "${SYNC_SRC}" "${MAC}:.local/bin/mymind-sync"
+ssh "${MAC}" 'chmod +x ~/.local/bin/mymind-sync; mkdir -p ~/.local/share/mymind/media ~/.local/share/mymind/previews ~/.config/mymind'
+scp "${ENV_SRC}" "${MAC}:.config/mymind/env"
+ssh "${MAC}" 'chmod 600 ~/.config/mymind/env'
+
+echo "==> ensure plugins.enabled includes mymind"
+ssh "${MAC}" 'python3 - <<'"'"'PY'"'"'
+from pathlib import Path
+p = Path.home() / ".hermes" / "config.yaml"
+text = p.read_text() if p.exists() else ""
+if "mymind" in text and "plugins:" in text:
+    print("mymind already referenced in config.yaml")
+else:
+    if "plugins:" not in text:
+        text = text.rstrip() + "\nplugins:\n  enabled:\n  - mymind\n"
+    elif "enabled:" in text.split("plugins:", 1)[-1]:
+        # naive append under enabled
+        lines = text.splitlines()
+        out = []
+        in_enabled = False
+        added = False
+        for line in lines:
+            out.append(line)
+            if line.strip() == "enabled:":
+                in_enabled = True
+                continue
+            if in_enabled and line.startswith("  - ") and not added:
+                pass
+            if in_enabled and (not line.startswith(" ") or line.strip().startswith("enabled")):
+                if not added:
+                    out.insert(-1 if out[-1] == line else len(out), "  - mymind")
+                    # fix: insert before current line
+                    out.pop()
+                    out.append("  - mymind")
+                    out.append(line)
+                    added = True
+                    in_enabled = False
+                    continue
+        if not added:
+            # fallback append block
+            text = "\n".join(out).rstrip() + "\n  - mymind\n"
+            p.write_text(text)
+            print("appended mymind (fallback)")
+        else:
+            p.write_text("\n".join(out) + "\n")
+            print("added mymind under enabled")
+    else:
+        text = text.rstrip() + "\nplugins:\n  enabled:\n  - mymind\n"
+        p.write_text(text)
+        print("wrote plugins.enabled block")
+PY'
+
+echo "==> install launchd agent for mymind-sync"
+ssh "${MAC}" 'mkdir -p ~/Library/LaunchAgents
+cat > ~/Library/LaunchAgents/com.j4c1cz.mymind-sync.plist <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.j4c1cz.mymind-sync</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>${HOME}/.local/bin/mymind-sync</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>${HOME}/.local/share/mymind/sync.log</string>
+  <key>StandardErrorPath</key><string>${HOME}/.local/share/mymind/sync.err</string>
+</dict>
+</plist>
+EOF
+# Expand HOME in the plist we just wrote with literal $HOME — rewrite properly
+python3 - <<PY
+from pathlib import Path
+import os
+home = os.path.expanduser("~")
+plist = Path.home() / "Library/LaunchAgents/com.j4c1cz.mymind-sync.plist"
+text = f"""<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>
+<!DOCTYPE plist PUBLIC \\"-//Apple//DTD PLIST 1.0//EN\\" \\"http://www.apple.com/DTDs/PropertyList-1.0.dtd\\">
+<plist version=\\"1.0\\">
+<dict>
+  <key>Label</key><string>com.j4c1cz.mymind-sync</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>{home}/.local/bin/mymind-sync</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>{home}/.local/share/mymind/sync.log</string>
+  <key>StandardErrorPath</key><string>{home}/.local/share/mymind/sync.err</string>
+</dict>
+</plist>
+"""
+plist.write_text(text)
+print("wrote", plist)
+PY
+launchctl bootout gui/$(id -u)/com.j4c1cz.mymind-sync 2>/dev/null || true
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.j4c1cz.mymind-sync.plist
+launchctl enable gui/$(id -u)/com.j4c1cz.mymind-sync
+launchctl kickstart -k gui/$(id -u)/com.j4c1cz.mymind-sync || true
+'
+
+echo "==> restart Hermes gateway"
+ssh "${MAC}" 'launchctl kickstart -k "gui/$(id -u)/ai.hermes.gateway" 2>/dev/null || launchctl kickstart -k "gui/$(id -u)/ai.hermes.gateway" || (launchctl list | grep -i hermes; true)'
+
+echo "==> smoke test plugin import on Mac"
+ssh "${MAC}" 'python3 -c "import sys; from pathlib import Path; sys.path.insert(0, str(Path.home()/\"/.hermes/plugins\")); from mymind import db; db.init_db(); print(\"db\", db.db_path())"'
+
+echo "Done. DM Openclaw a bare URL to test silent capture."

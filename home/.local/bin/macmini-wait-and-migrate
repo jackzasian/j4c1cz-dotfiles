@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Waits for Mac SSH, then runs full rsync migration.
+set -euo pipefail
+MAC_IP="${MAC_IP:-10.69.10.101}"
+echo "Waiting for SSH on ${MAC_IP}:22 (Ctrl+C to stop)..."
+while ! nc -z -w2 "${MAC_IP}" 22 2>/dev/null; do
+  printf '.'
+  sleep 20
+done
+echo
+echo "SSH is up — starting rsync migration"
+exec "${HOME}/.local/bin/macmini-migrate-rsync"

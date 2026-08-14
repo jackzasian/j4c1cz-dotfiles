@@ -1,0 +1,11 @@
+[Unit]
+Description=Publish staged Obsidian notes/photos to GitHub (j4c1cz sync → Vercel)
+Documentation=file:///home/jackz/Developer/j4c1cz/docs/PUBLISH.md
+Documentation=file:///home/jackz/Obsidian/J4c1c/Publish/README.md
+
+[Service]
+Type=oneshot
+ExecStart=/home/jackz/.local/bin/j4c1cz sync
+# The site is reachable directly; skip the Clash proxy for this hop.
+Environment=no_proxy=*
+Nice=10

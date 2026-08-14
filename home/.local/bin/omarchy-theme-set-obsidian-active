@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Activate the Omarchy CSS theme in all Obsidian vaults after omarchy-theme-set-obsidian copies theme.css.
+
+set -euo pipefail
+
+OBSIDIAN_CONFIG="${HOME}/.config/obsidian/obsidian.json"
+[[ -f ${OBSIDIAN_CONFIG} ]] || exit 0
+
+jq -r '.vaults | values[].path' "$OBSIDIAN_CONFIG" 2>/dev/null | while read -r vault_path; do
+  appearance="${vault_path}/.obsidian/appearance.json"
+  [[ -f ${appearance} ]] || continue
+  [[ -f ${vault_path}/.obsidian/themes/Omarchy/theme.css ]] || continue
+
+  tmp=$(mktemp)
+  jq '.cssTheme = "Omarchy"' "$appearance" >"$tmp"
+  mv "$tmp" "$appearance"
+done
+
+if pgrep -x obsidian >/dev/null; then
+  pkill -x obsidian 2>/dev/null || true
+  sleep 0.5
+  if command -v uwsm-app >/dev/null; then
+    uwsm-app -- obsidian &>/dev/null &
+  else
+    obsidian &>/dev/null &
+  fi
+fi

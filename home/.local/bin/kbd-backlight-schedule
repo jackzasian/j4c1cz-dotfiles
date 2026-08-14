@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# Dim ThinkPad keyboard backlight after hours; restore in the morning.
+
+set -euo pipefail
+
+CONFIG="${HOME}/.config/omarchy/kbd-backlight.conf"
+STATE="${HOME}/.cache/kbd-backlight-day-level"
+DEVICE='tpacpi::kbd_backlight'
+
+NIGHT_BRIGHTNESS=0
+DAY_BRIGHTNESS=2
+NIGHT_START=19:00
+DAY_START=07:00
+TIMEZONE=Asia/Shanghai
+
+if [[ -f ${CONFIG} ]]; then
+  # shellcheck disable=SC1090
+  source "${CONFIG}"
+fi
+
+get_brightness() {
+  brightnessctl --device="${DEVICE}" get
+}
+
+set_brightness() {
+  brightnessctl --device="${DEVICE}" set "$1" >/dev/null
+}
+
+to_minutes() {
+  local t="$1"
+  echo $((10#${t%%:*} * 60 + 10#${t##*:}))
+}
+
+is_night() {
+  local now_hm now_min night_min day_min
+  now_hm=$(TZ="${TIMEZONE}" date +%H:%M)
+  now_min=$(to_minutes "${now_hm}")
+  night_min=$(to_minutes "${NIGHT_START}")
+  day_min=$(to_minutes "${DAY_START}")
+
+  if (( night_min > day_min )); then
+    (( now_min >= night_min || now_min < day_min ))
+  else
+    (( now_min >= night_min && now_min < day_min ))
+  fi
+}
+
+night_mode() {
+  local current
+  current=$(get_brightness)
+  if (( current > NIGHT_BRIGHTNESS )); then
+    mkdir -p "$(dirname "${STATE}")"
+    echo "${current}" >"${STATE}"
+  fi
+  set_brightness "${NIGHT_BRIGHTNESS}"
+  echo "Keyboard backlight: night (${NIGHT_BRIGHTNESS}/2)"
+}
+
+day_mode() {
+  local level="${DAY_BRIGHTNESS}"
+  if [[ -f ${STATE} ]]; then
+    level=$(cat "${STATE}")
+    rm -f "${STATE}"
+  fi
+  set_brightness "${level}"
+  echo "Keyboard backlight: day (${level}/2)"
+}
+
+case "${1:-apply}" in
+  night) night_mode ;;
+  day) day_mode ;;
+  apply)
+    if is_night; then
+      night_mode
+    else
+      day_mode
+    fi
+    ;;
+  status)
+    echo "brightness=$(get_brightness)/$(brightnessctl --device="${DEVICE}" max)"
+    if is_night; then echo "mode=night"; else echo "mode=day"; fi
+    ;;
+  *)
+    echo "Usage: kbd-backlight-schedule [apply|night|day|status]" >&2
+    exit 1
+    ;;
+esac

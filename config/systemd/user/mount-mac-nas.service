@@ -1,0 +1,16 @@
+[Unit]
+Description=Mount Mac Mini NAS (Encrypted + Share1T) via SSHFS
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=%h/bin/mount-mac-nas all
+ExecStop=%h/bin/mount-mac-nas umount
+TimeoutStartSec=90
+Restart=on-failure
+RestartSec=120
+
+[Install]
+WantedBy=default.target

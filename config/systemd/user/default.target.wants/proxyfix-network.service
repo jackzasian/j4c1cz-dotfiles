@@ -1,0 +1,12 @@
+[Unit]
+Description=Proxyfix network change monitor
+
+[Service]
+Type=simple
+ExecStart=/home/jackz/Developer/Proxyfix/bin/proxyfix-network-monitor
+Restart=on-failure
+RestartSec=10
+Environment=HOME=/home/jackz
+
+[Install]
+WantedBy=default.target

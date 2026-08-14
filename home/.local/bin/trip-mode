@@ -1,0 +1,204 @@
+#!/bin/bash
+# Trip mode: maximise ThinkPad battery for offline use
+# Usage: trip-mode [on|off]
+# When ON: power-saver profile, kill non-essentials, dim screen
+
+MODE="${1:-on}"
+VIDEO_DIR="$HOME/Videos/yt-offline"
+DRY_RUN=0
+[ "${2:-}" == "--dry-run" ] && DRY_RUN=1
+[ "$MODE" == "--dry-run" ] && { DRY_RUN=1; MODE="on"; }
+
+# App name -> (match pattern, exclude pattern). Patterns are anchored to real
+# binary paths, not bare substrings, so they can't collide with unrelated
+# processes (e.g. bare "claude" matched this very Claude Code CLI session;
+# bare "signal" matched uwsm's session signal-handler.sh, whose death was the
+# likely trigger for past Hyprland crashes / safe-mode restarts).
+declare -A APP_KILL_PATTERNS=(
+  [wechat]="wechat"
+  [claude-desktop]="/usr/lib/claude-desktop/claude"
+  [chromium]="/usr/bin/chromium"
+  [brave]="/usr/bin/brave"
+  [signal-desktop]="signal-desktop"
+  [discord]="discord"
+  [telegram]="telegram-desktop"
+  [spotify]="/usr/bin/spotify"
+  [thunderbird]="/usr/lib/thunderbird/thunderbird"
+)
+# Never match: this script's own PID, opencode/Claude Code CLI, or anything
+# session-critical (uwsm, Hyprland, systemd, waybar).
+SELF_EXCLUDE='claude-code|--resume|signal-handler|uwsm|Hyprland|systemd|/usr/bin/waybar'
+
+safe_kill_app() {
+  local label="$1" pattern="$2" pids pid cmd killed=0
+  pids=$(pgrep -f -i -- "$pattern" 2>/dev/null || true)
+  for pid in $pids; do
+    [ "$pid" = "$$" ] && continue
+    cmd=$(ps -p "$pid" -o args= 2>/dev/null) || continue
+    [[ "$cmd" =~ $SELF_EXCLUDE ]] && continue
+    if [ "$DRY_RUN" = 1 ]; then
+      echo "   [dry-run] would kill $label (pid $pid): ${cmd:0:80}"
+    else
+      kill "$pid" 2>/dev/null && killed=1
+    fi
+  done
+  [ "$DRY_RUN" = 0 ] && { [ "$killed" = 1 ] && echo "   killed $label" || echo "   $label not running"; }
+}
+
+USER_SERVICES_TO_STOP=(
+  "clash-verge-service"
+  "app-Clash\\x20Verge@autostart.service"
+  "app-org.kde.kdeconnect.daemon@autostart.service"
+  "app-localsend_app@autostart.service"
+  "app-walker@autostart.service"
+  "app-limine\\x2dsnapper\\x2dnotify@autostart.service"
+  "app-print\\x2dapplet@autostart.service"
+  "elephant.service"
+  "mako.service"
+  "notify-sound-bridge.service"
+  "hyprsunset.service"
+  "studio-dock-lights.service"
+)
+
+SYSTEM_SERVICES_TO_STOP=(
+  "cups.service"
+  "cups-browsed.service"
+  "docker.service"
+  "containerd.service"
+  "avahi-daemon.service"
+  "smb.service"
+  "nmb.service"
+)
+
+if [ "$MODE" == "on" ]; then
+  echo "=== Trip Mode ON ==="
+  [ "$DRY_RUN" = 1 ] && echo "(dry run - no changes will be made)"
+
+  # Preflight: fail fast and clearly instead of half-launching.
+  for bin in kitty zellij obsidian powerprofilesctl brightnessctl; do
+    command -v "$bin" >/dev/null 2>&1 || { echo "!! missing required command: $bin"; exit 1; }
+  done
+  LAYOUT="$HOME/.config/zellij/trip.kdl"
+  [ -f "$LAYOUT" ] || { echo "!! missing zellij layout: $LAYOUT"; exit 1; }
+
+  echo "-> Power profile: power-saver"
+  [ "$DRY_RUN" = 1 ] || powerprofilesctl set power-saver
+
+  echo "-> Screen brightness: 30%"
+  [ "$DRY_RUN" = 1 ] || brightnessctl set 30% >/dev/null
+
+  echo "-> Stopping non-essential user services..."
+  for svc in "${USER_SERVICES_TO_STOP[@]}"; do
+    if [ "$DRY_RUN" = 1 ]; then
+      systemctl --user is-active --quiet "$svc" && echo "   [dry-run] would stop $svc"
+    else
+      systemctl --user stop "$svc" 2>/dev/null && echo "   stopped $svc" || true
+    fi
+  done
+
+  echo "-> Stopping non-essential system services (may need sudo)..."
+  echo "   Run: sudo systemctl stop cups docker containerd avahi-daemon smb nmb"
+  echo "   (Or skip - user-level savings are already significant)"
+  echo ""
+  echo "-> Bluetooth: left ON (earbuds/headphones for videos)"
+
+  echo "-> Hiding waybar..."
+  if [ "$DRY_RUN" = 1 ]; then
+    pgrep -x waybar >/dev/null && echo "   [dry-run] would stop waybar" || echo "   waybar not running"
+  else
+    pkill waybar 2>/dev/null && echo "   waybar stopped" || echo "   waybar not running"
+  fi
+
+  echo "-> Starting clipboard manager..."
+  if [ "$DRY_RUN" = 1 ]; then
+    echo "   [dry-run] would start cliphist"
+  else
+    systemctl --user start cliphist.service 2>/dev/null && echo "   cliphist started" || true
+    pgrep cliphist >/dev/null || (cliphist daemon &>/dev/null & echo "   cliphist daemon spawned")
+  fi
+
+  echo "-> Closing non-essential apps..."
+  for label in "${!APP_KILL_PATTERNS[@]}"; do
+    safe_kill_app "$label" "${APP_KILL_PATTERNS[$label]}"
+  done
+  # Kill old obsidian, restart fresh below
+  if [ "$DRY_RUN" = 1 ]; then
+    pgrep -f obsidian >/dev/null && echo "   [dry-run] would kill obsidian"
+  else
+    pkill -f obsidian 2>/dev/null && { echo "   killed obsidian"; sleep 1; } || true
+  fi
+
+  echo ""
+  echo "=== Launching trip session ==="
+  if pgrep -f "zellij .*--session trip" >/dev/null; then
+    echo "-> trip zellij session already running, not starting another"
+  else
+    echo "-> kitty + zellij (nvim | ollama | mpv tabs)"
+    [ "$DRY_RUN" = 1 ] || { kitty zellij --session trip --layout "$LAYOUT" & sleep 3; }
+  fi
+  echo "-> Obsidian"
+  if pgrep -f obsidian >/dev/null; then
+    echo "   obsidian already running"
+  else
+    [ "$DRY_RUN" = 1 ] || obsidian &
+  fi
+  echo ""
+  echo "Zellij tab 1: nvim       tab 2: ollama shell       tab 3: mpv (pick a video)"
+  echo "  Ctrl+t n    next tab    Ctrl+t g    go to tab..."
+  echo ""
+  echo "When done: trip-mode off"
+
+elif [ "$MODE" == "off" ]; then
+  echo "=== Trip Mode OFF ==="
+  [ "$DRY_RUN" = 1 ] && echo "(dry run - no changes will be made)"
+
+  echo "-> Power profile: balanced"
+  [ "$DRY_RUN" = 1 ] || powerprofilesctl set balanced
+
+  echo "-> Screen brightness: 70%"
+  [ "$DRY_RUN" = 1 ] || brightnessctl set 70% >/dev/null
+
+  echo "-> Starting services back..."
+  for svc in "${USER_SERVICES_TO_STOP[@]}"; do
+    if [ "$DRY_RUN" = 1 ]; then
+      echo "   [dry-run] would start $svc"
+    else
+      systemctl --user start "$svc" 2>/dev/null || true
+    fi
+  done
+
+  echo "-> Restoring waybar..."
+  if [ "$DRY_RUN" = 1 ]; then
+    echo "   [dry-run] would restart waybar"
+  else
+    # Only touch waybar if it's not already running - avoid an unnecessary
+    # kill/relaunch race with the compositor on every "off".
+    if pgrep -x waybar >/dev/null; then
+      echo "   waybar already running"
+    else
+      waybar &>/dev/null &
+      echo "   waybar started"
+    fi
+  fi
+
+  echo "-> Stopping clipboard manager..."
+  if [ "$DRY_RUN" = 1 ]; then
+    echo "   [dry-run] would stop cliphist"
+  else
+    systemctl --user stop cliphist.service 2>/dev/null || true
+    pkill -x cliphist 2>/dev/null || true
+  fi
+
+  echo "-> Re-enable system services if stopped:"
+  echo "   sudo systemctl start cups docker containerd avahi-daemon smb nmb"
+
+  echo "Done."
+
+else
+  echo "Usage: trip-mode [on|off] [--dry-run]"
+  echo ""
+  echo "Current power profile: $(powerprofilesctl get)"
+  echo "Current brightness: $(brightnessctl get) / $(brightnessctl max)"
+  echo "Battery: $(cat /sys/class/power_supply/BAT0/capacity 2>/dev/null || echo '?')%"
+  exit 1
+fi

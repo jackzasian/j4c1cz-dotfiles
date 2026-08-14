@@ -75,7 +75,6 @@ window#waybar.external .modules-right {
 }
 
 /* Modules inside blobs — no individual backgrounds */
-#custom-omarchy,
 #clock,
 #custom-weather,
 #custom-update,
@@ -84,6 +83,12 @@ window#waybar.external .modules-right {
 #custom-idle-indicator,
 #custom-notification-silencing-indicator,
 #custom-kdeconnect,
+#custom-spotify,
+#custom-tasknotes,
+#custom-agents,
+#custom-clash-geo,
+#custom-tailscale,
+#custom-syncthing,
 #bluetooth,
 #network,
 #backlight,
@@ -204,6 +209,13 @@ window#waybar.external .modules-right {
 #workspaces .taskbar-window image {
   margin: 0 1px;
   opacity: 0.72;
+  min-width: 16px;
+  min-height: 16px;
+}
+
+window#waybar.external #workspaces .taskbar-window image {
+  min-width: 18px;
+  min-height: 18px;
 }
 
 #workspaces .taskbar-window.active image {
@@ -227,8 +239,22 @@ window#waybar.laptop #tray {
 }
 
 #custom-omarchy {
-  padding-left: 2px;
-  padding-right: 8px;
+  background-color: transparent;
+  background-image: url("/home/jackz/.config/waybar/icons/omarchy.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 16px 16px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0 15px;
+  margin: 0 4px 0 0;
+  min-width: 0;
+  min-height: 20px;
+}
+
+#custom-omarchy:hover {
+  background-color: rgba(158, 206, 106, 0.14);
+  border-color: rgba(158, 206, 106, 0.3);
 }
 
 #custom-update {
@@ -272,6 +298,156 @@ window#waybar.laptop #tray {
 
 #custom-kdeconnect.connected {
   color: @foreground;
+}
+
+#custom-spotify.playing {
+  color: @accent;
+}
+
+#custom-spotify.paused {
+  opacity: 0.7;
+}
+
+/* AI coding tool chips — one color-coded pill per tool, collapses to
+   nothing when the tool isn't running so the bar only shows what's live */
+#custom-claude-code,
+#custom-cursor,
+#custom-claude-desktop,
+#custom-opencode {
+  padding: 2px 8px 2px 22px;
+  margin: 0 2px;
+  border-radius: 11px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  min-height: 16px;
+  background-repeat: no-repeat;
+  background-position: 6px center;
+  background-size: 14px 14px;
+}
+
+#custom-claude-code { background-image: url("/home/jackz/.config/waybar/icons/claude.png"); }
+#custom-claude-desktop { background-image: url("/home/jackz/.config/waybar/icons/claude.png"); }
+#custom-cursor { background-image: url("/home/jackz/.config/waybar/icons/cursor.png"); }
+#custom-opencode { background-image: url("/home/jackz/.config/waybar/icons/opencode.png"); }
+
+#custom-claude-code.off,
+#custom-cursor.off,
+#custom-claude-desktop.off,
+#custom-opencode.off {
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  min-height: 0;
+  border: none;
+  background: transparent;
+}
+
+#custom-claude-code.idle { color: #7daea3; opacity: 0.7; background-color: rgba(125,174,163,0.10); border-color: rgba(125,174,163,0.22); }
+#custom-claude-code.working { color: #7daea3; opacity: 1; background-color: rgba(125,174,163,0.24); border-color: rgba(125,174,163,0.5); }
+#custom-claude-code.done { color: #a3be8c; background-color: rgba(163,190,140,0.2); border-color: rgba(163,190,140,0.42); }
+
+#custom-cursor.idle { color: #61afef; opacity: 0.7; background-color: rgba(97,175,239,0.10); border-color: rgba(97,175,239,0.22); }
+#custom-cursor.working { color: #61afef; opacity: 1; background-color: rgba(97,175,239,0.24); border-color: rgba(97,175,239,0.5); }
+#custom-cursor.done { color: #a3be8c; background-color: rgba(163,190,140,0.2); border-color: rgba(163,190,140,0.42); }
+
+#custom-claude-desktop.idle { color: #cc785c; opacity: 0.7; background-color: rgba(204,120,92,0.10); border-color: rgba(204,120,92,0.22); }
+#custom-claude-desktop.working { color: #cc785c; opacity: 1; background-color: rgba(204,120,92,0.24); border-color: rgba(204,120,92,0.5); }
+#custom-claude-desktop.done { color: #a3be8c; background-color: rgba(163,190,140,0.2); border-color: rgba(163,190,140,0.42); }
+
+#custom-opencode.idle { color: #b48ead; opacity: 0.7; background-color: rgba(180,142,173,0.10); border-color: rgba(180,142,173,0.22); }
+#custom-opencode.working { color: #b48ead; opacity: 1; background-color: rgba(180,142,173,0.24); border-color: rgba(180,142,173,0.5); }
+#custom-opencode.done { color: #a3be8c; background-color: rgba(163,190,140,0.2); border-color: rgba(163,190,140,0.42); }
+
+#custom-token-usage {
+  padding: 2px 8px;
+  margin: 0 2px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+#custom-token-usage.under {
+  color: #a3be8c;
+  background-color: rgba(163, 190, 140, 0.12);
+  border-color: rgba(163, 190, 140, 0.26);
+}
+
+#custom-token-usage.over {
+  color: #d8a657;
+  background-color: rgba(216, 166, 87, 0.14);
+  border-color: rgba(216, 166, 87, 0.3);
+}
+
+#custom-tasknotes.overdue {
+  color: #ea6962;
+}
+
+#custom-usage-limits {
+  padding: 2px 8px;
+  margin: 0 2px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+#custom-usage-limits.ok {
+  color: #a3be8c;
+  background-color: rgba(163, 190, 140, 0.12);
+  border-color: rgba(163, 190, 140, 0.26);
+}
+
+#custom-usage-limits.warn {
+  color: #d8a657;
+  background-color: rgba(216, 166, 87, 0.14);
+  border-color: rgba(216, 166, 87, 0.3);
+}
+
+#custom-usage-limits.alert {
+  color: #ea6962;
+  background-color: rgba(234, 105, 98, 0.16);
+  border-color: rgba(234, 105, 98, 0.4);
+  font-weight: bold;
+}
+
+#custom-usage-limits.unknown {
+  color: #8a8a8a;
+  opacity: 0.6;
+}
+
+#custom-agents {
+  padding: 2px 8px;
+  margin: 0 2px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-weight: bold;
+}
+
+#custom-agents.busy {
+  color: #a3be8c;
+  background-color: rgba(163, 190, 140, 0.16);
+  border-color: rgba(163, 190, 140, 0.35);
+}
+
+#custom-agents.idle {
+  color: #8a8a8a;
+  background-color: rgba(120, 120, 120, 0.08);
+  border-color: rgba(120, 120, 120, 0.18);
+  opacity: 0.7;
+}
+
+#custom-tailscale.offline,
+#custom-syncthing.offline,
+#custom-clash-geo.missing,
+#custom-clash-geo.warn {
+  color: #ea6962;
+}
+
+#custom-tailscale.online,
+#custom-syncthing.ok,
+#custom-clash-geo.ok {
+  color: @foreground;
+}
+
+#custom-syncthing.error {
+  color: #ea6962;
 }
 
 #group-audio > box > *,

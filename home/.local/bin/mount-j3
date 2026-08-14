@@ -1,0 +1,34 @@
+#!/bin/bash
+set -euo pipefail
+
+# Mount USB drive labeled J3 (HIKSEMI RTL9210).
+# Note: this enclosure needs the uas driver; blacklisting uas breaks detection.
+
+J3=$(lsblk -no PATH,LABEL | awk '$2=="J3" {print $1; exit}')
+if [[ -z "$J3" ]]; then
+  echo "J3 not found. Plug in the HIKSEMI drive and try again."
+  lsblk -o NAME,SIZE,LABEL
+  exit 1
+fi
+
+echo "J3 is $J3"
+ntfsfix "$J3" || true
+mkdir -p /run/media/jackz/J3
+umount /run/media/jackz/J3 2>/dev/null || true
+
+for opts in \
+  "uid=1000,gid=1000,windows_names" \
+  "uid=1000,gid=1000,windows_names,force" \
+  "uid=1000,gid=1000,windows_names,ro" \
+  "uid=1000,gid=1000,windows_names,ro,force"; do
+  if mount -t ntfs-3g -o "$opts" "$J3" /run/media/jackz/J3 2>/dev/null; then
+    echo "Mounted at /run/media/jackz/J3 ($opts)"
+    ls /run/media/jackz/J3 | head -10
+    exit 0
+  fi
+done
+
+echo "Mount failed: NTFS \$Bitmap read I/O errors."
+echo "Fix on Windows: open cmd as admin, then:  chkdsk J: /f"
+echo "(Use the drive letter Windows assigns to J3.)"
+exit 1

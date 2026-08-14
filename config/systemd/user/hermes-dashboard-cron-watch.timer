@@ -1,0 +1,10 @@
+[Unit]
+Description=Poll Mac cron every 3 minutes for dashboard refresh
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=3min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

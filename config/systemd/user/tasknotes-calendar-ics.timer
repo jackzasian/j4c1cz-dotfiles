@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh TaskNotes ICS feed every 15 minutes
+
+[Timer]
+OnBootSec=2m
+OnUnitActiveSec=15m
+AccuracySec=1m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

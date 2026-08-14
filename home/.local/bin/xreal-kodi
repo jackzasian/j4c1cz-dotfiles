@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Launch Kodi on the XREAL glasses display with travel mode.
+set -euo pipefail
+
+# shellcheck source=/dev/null
+source "${HOME}/.local/lib/xreal/common.sh"
+
+cmd_launch() {
+  local mon
+  mon=$(xreal_app_prepare) || {
+    xreal_app_error "No XREAL glasses detected.\n\nPlug in via USB-C first."
+    exit 1
+  }
+
+  if ! command -v kodi >/dev/null 2>&1; then
+    xreal_app_error "Kodi is not installed.\n\nRun: sudo pacman -S kodi"
+    exit 1
+  fi
+
+  xreal_xr_disable
+  hyprctl reload >/dev/null 2>&1 || true
+
+  xreal_notify "XREAL Kodi" "Opening on ${mon} · laptop display off"
+  exec uwsm-app -- kodi
+}
+
+usage() {
+  cat <<'EOF'
+Usage: xreal-kodi
+
+Launch Kodi on XREAL glasses. Opens from app menu: XREAL Kodi
+EOF
+}
+
+main() {
+  case ${1:-} in
+    -h|--help|help|"") cmd_launch ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"

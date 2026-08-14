@@ -40,7 +40,8 @@ proxy_on() {
   export HTTPS_PROXY=$url
   export ALL_PROXY="socks5://${host}:${port}"
   export all_proxy=$ALL_PROXY
-  export NO_PROXY='localhost,127.0.0.1,::1,10.0.0.0/8,192.168.0.0/16,172.16.0.0/12,local'
+  # Include Tailscale CGNAT (100.64/10) + MagicDNS so Clash does not intercept mesh traffic.
+  export NO_PROXY='localhost,127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10,.ts.net,jacks-mac-mini,thinkpad1,local'
   export no_proxy=$NO_PROXY
   export NPM_CONFIG_PROXY=$url
   export NPM_CONFIG_HTTPS_PROXY=$url

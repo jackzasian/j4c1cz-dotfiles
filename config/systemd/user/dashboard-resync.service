@@ -1,0 +1,6 @@
+[Unit]
+Description=Periodic re-sync ThinkPad dashboard sources to Mac Mini
+
+[Service]
+Type=oneshot
+ExecStart=%h/bin/dashboard-resync.sh

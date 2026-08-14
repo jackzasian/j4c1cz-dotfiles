@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Stop local subscription CLIs (Cursor agent / OpenCode / Claude Code).
+# Does NOT kill Cursor IDE, Hermes Mac gateway, or security-scan timers.
+set -euo pipefail
+
+ALL=0
+[[ "${1:-}" == "--all" ]] && ALL=1
+
+stop_pids() {
+  local label="$1"
+  shift
+  local pids=("$@")
+  ((${#pids[@]})) || return 0
+  echo "stopping $label: ${pids[*]}"
+  kill "${pids[@]}" 2>/dev/null || true
+}
+
+mapfile -t CURSOR_PIDS < <(pgrep -f '/\.local/share/cursor-agent/.*/index\.js' 2>/dev/null | while read -r p; do
+  cmd="$(ps -o cmd= -p "$p" 2>/dev/null || true)"
+  [[ "$cmd" == *worker\ start* ]] && continue
+  echo "$p"
+done)
+stop_pids "cursor-agent" "${CURSOR_PIDS[@]:-}"
+
+mapfile -t OC_PIDS < <(pgrep -f 'opencode' 2>/dev/null | while read -r p; do
+  cmd="$(ps -o cmd= -p "$p" 2>/dev/null || true)"
+  [[ "$cmd" == *agents-stop* || "$cmd" == *opencode-here* ]] && continue
+  echo "$p"
+done)
+stop_pids "opencode" "${OC_PIDS[@]:-}"
+
+mapfile -t CL_PIDS < <(pgrep -f '/opt/claude-code/bin/claude|/usr/bin/claude' 2>/dev/null | while read -r p; do
+  cmd="$(ps -o cmd= -p "$p" 2>/dev/null || true)"
+  [[ "$cmd" == *electron* ]] && continue
+  echo "$p"
+done)
+stop_pids "claude" "${CL_PIDS[@]:-}"
+
+if (( ALL )); then
+  mapfile -t W_PIDS < <(pgrep -f 'worker start --worker-dir' 2>/dev/null || true)
+  stop_pids "cursor-worker" "${W_PIDS[@]:-}"
+fi
+
+sleep 0.3
+echo "done. Remaining CLIs:"
+agents-status 2>/dev/null | sed -n '1,25p' || true

@@ -1,0 +1,6 @@
+[Unit]
+Description=Sonos Roam stream watchdog
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/sonos-stream-watchdog.sh

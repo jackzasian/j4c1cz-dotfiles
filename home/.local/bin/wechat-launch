@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Launch WeChat or focus an existing window.
+# WeChat is single-instance: if the process is alive but Hyprland has no client,
+# a plain second launch is a no-op — restart in that case.
+#
+# Chinese IME: WeChat is XWayland/Electron. Global GTK/QT_IM_MODULE are unset for
+# native Wayland apps (fcitx5 diagnose); WeChat needs them + X11 ozone.
+set -euo pipefail
+
+WINDOW_PATTERN='wechat'
+LAUNCH='uwsm-app -- env GTK_IM_MODULE=fcitx QT_IM_MODULE=fcitx XMODIFIERS=@im=fcitx INPUT_METHOD=fcitx SDL_IM_MODULE=fcitx ELECTRON_OZONE_PLATFORM_HINT=x11 OZONE_PLATFORM=x11 GDK_BACKEND=x11 wechat'
+
+has_wechat_window() {
+  hyprctl clients -j | jq -e --arg p "$WINDOW_PATTERN" '
+    .[] | select((.class | test("\\b" + $p + "\\b"; "i")) or (.title | test("\\b" + $p + "\\b"; "i")))
+  ' >/dev/null 2>&1
+}
+
+if has_wechat_window; then
+  exec omarchy-launch-or-focus "$WINDOW_PATTERN" "$LAUNCH"
+fi
+
+if pgrep -x wechat >/dev/null; then
+  killall wechat 2>/dev/null || true
+  for _ in $(seq 1 20); do
+    pgrep -x wechat >/dev/null || break
+    sleep 0.2
+  done
+fi
+
+exec omarchy-launch-or-focus "$WINDOW_PATTERN" "$LAUNCH"

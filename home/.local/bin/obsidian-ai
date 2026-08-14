@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Launch opencode against the Obsidian vault with a model tier picked by
+# power state: small local model on battery, bigger one on AC.
+# Config lives in the vault itself: ~/Obsidian/J4c1c/opencode.json
+#
+# NOTE (2026-08-05): opencode's tool-calling loop against local Ollama
+# models was flaky/slow in testing — for the everyday "paste a note, get
+# it reformatted" flow, use `obsidian-format` instead (direct Ollama chat,
+# no tool-calling, much faster). Use this script only when you actually
+# want the agent editing files in the vault.
+set -euo pipefail
+
+VAULT="/home/jackz/Obsidian/J4c1c"
+
+ac_online=1
+if [[ -r /sys/class/power_supply/AC/online ]]; then
+  ac_online="$(cat /sys/class/power_supply/AC/online)"
+elif [[ -r /sys/class/power_supply/ACAD/online ]]; then
+  ac_online="$(cat /sys/class/power_supply/ACAD/online)"
+fi
+
+if [[ "$ac_online" == "1" ]]; then
+  agent="note-formatter-quality"
+else
+  agent="note-formatter"
+fi
+
+echo "obsidian-ai: on $( [[ "$ac_online" == "1" ]] && echo AC || echo battery ), using agent '$agent'" >&2
+
+cd "$VAULT"
+exec opencode --agent "$agent" "$@"

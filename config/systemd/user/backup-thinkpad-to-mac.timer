@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly ThinkPad → Mac Mini NAS backup (Sunday 11:00, AC only)
+
+[Timer]
+OnCalendar=Sun *-*-* 11:00:00
+Persistent=true
+RandomizedDelaySec=15min
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,7 @@
+[Unit]
+Description=Collect Life Dashboard activity data
+
+[Service]
+Type=oneshot
+ExecStart=%h/Projects/life-dashboard/bin/life-dashboard-collect.sh
+Environment=HOME=%h

@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# From ThinkPad: SSH to MacBook, install Anki+Syncthing, pair Syncthing folder.
+set -euo pipefail
+
+MAC_IP="${MAC_IP:-192.168.1.9}"
+MAC_USER="${MAC_USER:-}"
+REMOTE_SCRIPT="${HOME}/.local/bin/macbook-anki-syncthing-remote.sh"
+ST_HOME="${HOME}/.local/state/syncthing"
+THINKPAD_ID="5MPVOSR-GPJHI3O-GYSCG7J-424SGWF-LFFWXJ7-HYAV6PK-R7CQMAH-UP4SZQU"
+FOLDER_ID="anki-profile"
+ANKI_PATH="${HOME}/.local/share/Anki2/User 1"
+
+pick_user() {
+  if [[ -n ${MAC_USER} ]]; then
+    echo "${MAC_USER}"
+    return 0
+  fi
+  for u in zzx zhengzexi; do
+    if ssh -o BatchMode=yes -o ConnectTimeout=4 "${u}@${MAC_IP}" 'echo ok' >/dev/null 2>&1; then
+      echo "${u}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+[[ -x ${REMOTE_SCRIPT} ]] || { echo "Missing ${REMOTE_SCRIPT}" >&2; exit 1; }
+
+user="$(pick_user)" || {
+  cat >&2 <<EOF
+Cannot SSH to ${MAC_IP} (port 22 refused or auth failed).
+
+On the MacBook:
+  System Settings → General → Sharing → Remote Login → ON
+  Allow access for your user (zzx / zhengzexi)
+
+Then copy your SSH key:
+  ssh-copy-id zzx@${MAC_IP}
+
+Retry:
+  macbook-setup-anki-syncthing
+EOF
+  exit 1
+}
+
+echo "Using SSH: ${user}@${MAC_IP}"
+
+scp -q "${REMOTE_SCRIPT}" "${user}@${MAC_IP}:/tmp/macbook-anki-syncthing-remote.sh"
+MAC_ID="$(
+  ssh "${user}@${MAC_IP}" 'bash /tmp/macbook-anki-syncthing-remote.sh' \
+    | tee /tmp/macbook-setup.log \
+    | awk '/^Mac Syncthing ID:/ {print $4; exit} /^Mac ID:/ {print $3; exit}'
+)"
+
+[[ -n ${MAC_ID} ]] || { echo "Could not read Mac Syncthing device ID" >&2; exit 1; }
+echo "Mac device ID: ${MAC_ID}"
+
+mkdir -p "${ANKI_PATH}"
+cat >"${ANKI_PATH}/.stignore" <<'EOF'
+// Anki runtime files — never sync these
+*.tmp
+*.lock
+backups
+collection.anki2-journal
+collection.anki2-wal
+collection.anki2-shm
+EOF
+
+syncthing cli -H "${ST_HOME}" config devices add \
+  --device-id="${MAC_ID}" \
+  --name="macbook-air" \
+  --addresses="dynamic" 2>/dev/null || true
+
+if ! syncthing cli -H "${ST_HOME}" config folders list 2>/dev/null | grep -q "${FOLDER_ID}"; then
+  syncthing cli -H "${ST_HOME}" config folders add \
+    --id="${FOLDER_ID}" \
+    --label="Anki Profile" \
+    --path="${ANKI_PATH}" \
+    --type=sendreceive
+fi
+
+syncthing cli -H "${ST_HOME}" config folders "${FOLDER_ID}" devices add --device-id="${MAC_ID}" 2>/dev/null || true
+syncthing cli -H "${ST_HOME}" config folders "${FOLDER_ID}" devices add --device-id="${THINKPAD_ID}" 2>/dev/null || true
+
+echo
+echo "=== ThinkPad side configured ==="
+echo "Syncthing folder: Anki Profile → ${ANKI_PATH}"
+echo "Paired with Mac: ${MAC_ID}"
+echo
+echo "Open Syncthing on both devices and accept the new device/folder if prompted:"
+echo "  http://127.0.0.1:8384"
+echo
+echo "On Mac, open Anki once and sign into AnkiWeb if you use it."
+echo "Rule: close Anki on one machine before opening on the other."

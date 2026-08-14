@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Launch a Zen Browser web app with Clash PAC (Strava direct, rest proxied).
+set -euo pipefail
+
+source "${HOME}/.config/omarchy/proxy.sh" 2>/dev/null || true
+
+PORT=$(_clash_mixed_port 2>/dev/null || echo 7897)
+PAC="file://${HOME}/.config/omarchy/clash-proxy.pac"
+URL="${1:?Usage: zen-launch-webapp <url> [window-pattern]}"
+shift
+WINDOW_PATTERN="${1:-}"
+[[ -n "$WINDOW_PATTERN" ]] && shift
+
+if ! _clash_listening 2>/dev/null; then
+  notify-send -u critical "Web app" "Start Clash Verge first — needs proxy on 127.0.0.1:${PORT}." 2>/dev/null || \
+    echo "Start Clash Verge first — web app needs proxy on 127.0.0.1:${PORT}" >&2
+fi
+
+ZEN_LAUNCH=(uwsm-app -- /opt/zen-browser-bin/zen-bin "--proxy-pac-url=${PAC}" "--app=${URL}")
+
+if [[ -n "$WINDOW_PATTERN" ]]; then
+  # shellcheck disable=SC2068
+  exec omarchy-launch-or-focus "$WINDOW_PATTERN" "${ZEN_LAUNCH[@]}"
+fi
+
+exec setsid "${ZEN_LAUNCH[@]}" "$@"

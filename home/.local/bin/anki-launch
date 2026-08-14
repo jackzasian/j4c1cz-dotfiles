@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Launch official Anki (bundled Python 3.13) with Omarchy-safe Qt settings.
+set -euo pipefail
+
+ANKI="/home/jackz/.local/opt/anki-linux/anki"
+
+# Only forward supported package/add-on paths (ignore stray "env", .env, %f, etc.).
+args=()
+for arg in "$@"; do
+  [[ -z $arg || $arg == "%f" || $arg == "%u" ]] && continue
+  case "${arg,,}" in
+    *.apkg | *.colpkg | *.ankiaddon | *.anki) args+=("$arg") ;;
+  esac
+done
+
+# Optional Clash proxy for AnkiWeb sync (read from current env before scrubbing).
+proxy_env=()
+if [[ -f "${HOME}/.config/omarchy/proxy.sh" ]]; then
+  # shellcheck disable=SC1091
+  source "${HOME}/.config/omarchy/proxy.sh"
+  if _clash_listening 2>/dev/null; then
+    proxy_on >/dev/null 2>&1 || true
+    for var in http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY all_proxy no_proxy NO_PROXY; do
+      [[ -n ${!var:-} ]] && proxy_env+=("$var=${!var}")
+    done
+  fi
+fi
+
+# Omarchy's session env (kvantum, wayland;xcb, etc.) segfaults Anki — run with a clean Qt env.
+exec env -i \
+  HOME="$HOME" \
+  USER="${USER:-$(id -un)}" \
+  LOGNAME="${LOGNAME:-$(id -un)}" \
+  DISPLAY="${DISPLAY:-:0}" \
+  WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-}" \
+  XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" \
+  XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}" \
+  XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}" \
+  XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}" \
+  XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}" \
+  LANG="${LANG:-en_US.UTF-8}" \
+  LC_ALL="${LC_ALL:-${LANG:-en_US.UTF-8}}" \
+  PATH="/home/jackz/.local/opt/anki-linux:/home/jackz/.local/bin:/usr/bin:/bin" \
+  QT_QPA_PLATFORM="${ANKI_QPA_PLATFORM:-xcb}" \
+  "${proxy_env[@]}" \
+  "$ANKI" "${args[@]}"

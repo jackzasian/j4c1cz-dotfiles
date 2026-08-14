@@ -1,0 +1,308 @@
+#!/usr/bin/env bash
+# Bedtime: blank all screens + kill ThinkPad lights (lid stays open).
+# Toggle with the same hotkey to wake.
+#
+# Omarchy enables key/mouse → DPMS on, so we disable that while dark;
+# otherwise releasing the hotkey immediately wakes the screens.
+# A keeper loop also holds keyboard backlight at 0 — ThinkPad EC often
+# auto-lights the keys on keypress even after we set brightness to 0.
+set -euo pipefail
+
+STATE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/bedtime-mode"
+STATE_FILE="${STATE_DIR}/state"
+MODE_FILE="${STATE_DIR}/mode"
+DPMS_OPTS_FILE="${STATE_DIR}/dpms-opts"
+LOG_FILE="${STATE_DIR}/bedtime.log"
+KEEPER_PID_FILE="${STATE_DIR}/keeper.pid"
+SUDO="${SUDO:-/usr/bin/sudo}"
+KBD_DEV='tpacpi::kbd_backlight'
+
+mkdir -p "$STATE_DIR"
+
+log() {
+  printf '%s %s\n' "$(date '+%F %T')" "$*" >>"$LOG_FILE" 2>/dev/null || true
+}
+
+notify() {
+  notify-send -u low -a "Bedtime" "$1" "${2:-}" 2>/dev/null || true
+}
+
+led_get() {
+  brightnessctl --device="$1" get 2>/dev/null || echo 0
+}
+
+led_set() {
+  brightnessctl --device="$1" set "$2" >/dev/null 2>&1 || true
+}
+
+led_trigger_get() {
+  local path="/sys/class/leds/$1/trigger"
+  [[ -r "$path" ]] || { echo none; return; }
+  grep -o '\[[^]]*\]' "$path" 2>/dev/null | tr -d '[]' || echo none
+}
+
+hypr_opt_int() {
+  hyprctl getoption "$1" -j 2>/dev/null | jq -r '.int // empty' 2>/dev/null \
+    || hyprctl getoption "$1" 2>/dev/null | awk '/^int:/{print $2; exit}'
+}
+
+save_dpms_wake_opts() {
+  local key mouse
+  key=$(hypr_opt_int misc:key_press_enables_dpms)
+  mouse=$(hypr_opt_int misc:mouse_move_enables_dpms)
+  printf 'key=%s\nmouse=%s\n' "${key:-1}" "${mouse:-1}" >"$DPMS_OPTS_FILE"
+}
+
+disable_dpms_wake() {
+  save_dpms_wake_opts
+  hyprctl keyword misc:key_press_enables_dpms false >/dev/null 2>&1 || true
+  hyprctl keyword misc:mouse_move_enables_dpms false >/dev/null 2>&1 || true
+}
+
+restore_dpms_wake() {
+  local key=1 mouse=1
+  if [[ -f "$DPMS_OPTS_FILE" ]]; then
+    key=$(grep -E '^key=' "$DPMS_OPTS_FILE" | cut -d= -f2- || echo 1)
+    mouse=$(grep -E '^mouse=' "$DPMS_OPTS_FILE" | cut -d= -f2- || echo 1)
+  fi
+  if [[ "$key" == "1" || "$key" == "true" ]]; then
+    hyprctl keyword misc:key_press_enables_dpms true >/dev/null 2>&1 || true
+  else
+    hyprctl keyword misc:key_press_enables_dpms false >/dev/null 2>&1 || true
+  fi
+  if [[ "$mouse" == "1" || "$mouse" == "true" ]]; then
+    hyprctl keyword misc:mouse_move_enables_dpms true >/dev/null 2>&1 || true
+  else
+    hyprctl keyword misc:mouse_move_enables_dpms false >/dev/null 2>&1 || true
+  fi
+}
+
+# Prefer a usable keyboard level if current readout is already 0 (e.g. re-entry)
+kbd_level_for_save() {
+  local cur day
+  cur=$(led_get "$KBD_DEV")
+  if [[ "$cur" != "0" ]]; then
+    echo "$cur"
+    return
+  fi
+  day=$(cat "${HOME}/.cache/kbd-backlight-day-level" 2>/dev/null || true)
+  if [[ -n "${day:-}" && "$day" != "0" ]]; then
+    echo "$day"
+    return
+  fi
+  # Match kbd-backlight-schedule night default when evening
+  echo 1
+}
+
+stop_keeper() {
+  local pid
+  if [[ -f "$KEEPER_PID_FILE" ]]; then
+    pid=$(cat "$KEEPER_PID_FILE" 2>/dev/null || true)
+    if [[ -n "${pid:-}" ]] && kill -0 "$pid" 2>/dev/null; then
+      kill "$pid" 2>/dev/null || true
+      # wait briefly so we don't race a last brightness write
+      for _ in 1 2 3 4 5; do
+        kill -0 "$pid" 2>/dev/null || break
+        sleep 0.05
+      done
+      kill -9 "$pid" 2>/dev/null || true
+    fi
+    rm -f "$KEEPER_PID_FILE"
+  fi
+  # Also reap any stray keepers from older crashes
+  pkill -f 'bedtime-mode keep-dark' 2>/dev/null || true
+}
+
+# Background: hold kbd backlight off + keep key/mouse from waking DPMS.
+# ThinkPad EC often re-lights keys on keypress; Hyprland may re-enable DPMS wake after reload.
+keep_dark_loop() {
+  local kbd_now key_opt
+  while [[ -f "$MODE_FILE" && "$(cat "$MODE_FILE" 2>/dev/null || true)" == "dark" ]]; do
+    kbd_now=$(led_get "$KBD_DEV")
+    if [[ "$kbd_now" != "0" ]]; then
+      led_set "$KBD_DEV" 0
+      log "keeper: forced kbd_backlight 0 (was $kbd_now)"
+    fi
+
+    key_opt=$(hypr_opt_int misc:key_press_enables_dpms)
+    if [[ "$key_opt" == "1" ]]; then
+      hyprctl keyword misc:key_press_enables_dpms false >/dev/null 2>&1 || true
+      hyprctl keyword misc:mouse_move_enables_dpms false >/dev/null 2>&1 || true
+      log "keeper: re-disabled dpms wake"
+    fi
+
+    # If something turned panels back on without leaving bedtime, blank again.
+    # Skip if hyprlock is up (user may be unlocking).
+    if ! pidof hyprlock >/dev/null 2>&1; then
+      if hyprctl monitors -j 2>/dev/null | jq -e 'any(.[]; .dpmsStatus == true)' >/dev/null 2>&1; then
+        hyprctl dispatch dpms off >/dev/null 2>&1 || true
+        log "keeper: re-blanked dpms"
+      fi
+    fi
+
+    sleep 0.35
+  done
+  rm -f "$KEEPER_PID_FILE"
+}
+
+start_keeper() {
+  stop_keeper
+  # Detach fully so toggle returns immediately and survives terminal close
+  nohup bash -c '"$0" keep-dark' "$0" >/dev/null 2>&1 &
+  echo $! >"$KEEPER_PID_FILE"
+  disown $! 2>/dev/null || true
+  log "keeper: started pid=$(cat "$KEEPER_PID_FILE")"
+}
+
+root_leds_dark() {
+  "$SUDO" -n bash -c '
+    for led in platform::mute platform::micmute; do
+      [[ -w /sys/class/leds/$led/trigger ]] && echo none > "/sys/class/leds/$led/trigger"
+      [[ -w /sys/class/leds/$led/brightness ]] && echo 0 > "/sys/class/leds/$led/brightness"
+    done
+    for i in 0 7 10 12; do
+      echo "$i off" > /proc/acpi/ibm/led 2>/dev/null || true
+    done
+    for led in tpacpi::power tpacpi::standby tpacpi::lid_logo_dot tpacpi::thinkvantage tpacpi::thinklight; do
+      [[ -w /sys/class/leds/$led/brightness ]] && echo 0 > "/sys/class/leds/$led/brightness"
+    done
+  ' 2>/dev/null || true
+}
+
+root_leds_restore() {
+  local mute_trig="${1:-audio-mute}"
+  local mic_trig="${2:-audio-micmute}"
+  "$SUDO" -n bash -c "
+    [[ -w /sys/class/leds/platform::mute/trigger ]] && echo '${mute_trig}' > /sys/class/leds/platform::mute/trigger
+    [[ -w /sys/class/leds/platform::micmute/trigger ]] && echo '${mic_trig}' > /sys/class/leds/platform::micmute/trigger
+    for i in 0 7 10 12; do
+      echo \"\$i on\" > /proc/acpi/ibm/led 2>/dev/null || true
+    done
+  " 2>/dev/null || true
+}
+
+restore_keyboard() {
+  local saved="${1:-1}"
+  if command -v kbd-backlight-schedule >/dev/null 2>&1; then
+    kbd-backlight-schedule apply >/dev/null 2>&1 || true
+  fi
+  # If schedule left it off (or missing), use saved / fallback
+  if [[ "$(led_get "$KBD_DEV")" == "0" ]]; then
+    if [[ "$saved" != "0" ]]; then
+      led_set "$KBD_DEV" "$saved"
+    else
+      led_set "$KBD_DEV" 1
+    fi
+  fi
+}
+
+restore_mouse_lights() {
+  if command -v aw510m-lights >/dev/null 2>&1; then
+    aw510m-lights on >/dev/null 2>&1 || true
+  fi
+}
+
+save_and_dark() {
+  local kbd power lid mute mic mute_trig mic_trig
+  kbd=$(kbd_level_for_save)
+  power=$(led_get 'tpacpi::power')
+  lid=$(led_get 'tpacpi::lid_logo_dot')
+  mute=$(led_get 'platform::mute')
+  mic=$(led_get 'platform::micmute')
+  mute_trig=$(led_trigger_get 'platform::mute')
+  mic_trig=$(led_trigger_get 'platform::micmute')
+  case "$mute_trig" in none|"") mute_trig=audio-mute ;; esac
+  case "$mic_trig" in none|"") mic_trig=audio-micmute ;; esac
+
+  printf 'kbd=%s\npower=%s\nlid=%s\nmute=%s\nmic=%s\nmute_trig=%s\nmic_trig=%s\n' \
+    "$kbd" "$power" "$lid" "$mute" "$mic" "$mute_trig" "$mic_trig" >"$STATE_FILE"
+
+  disable_dpms_wake
+  hyprctl dispatch dpms off >/dev/null 2>&1 || true
+  sleep 0.15
+  hyprctl dispatch dpms off >/dev/null 2>&1 || true
+
+  led_set "$KBD_DEV" 0
+  led_set 'tpacpi::power' 0
+  led_set 'tpacpi::lid_logo_dot' 0
+  led_set 'platform::mute' 0
+  led_set 'platform::micmute' 0
+  root_leds_dark
+
+  if command -v aw510m-lights >/dev/null 2>&1; then
+    aw510m-lights off >/dev/null 2>&1 || true
+  fi
+
+  echo dark >"$MODE_FILE"
+  start_keeper
+  log "mode=dark"
+  notify "Bedtime on" "Dark — typing won't wake screen or kbd light. Super+Shift+Caps+S to wake"
+}
+
+restore() {
+  local kbd=1 mute_trig=audio-mute mic_trig=audio-micmute
+  stop_keeper
+
+  if [[ -f "$STATE_FILE" ]]; then
+    kbd=$(grep -E '^kbd=' "$STATE_FILE" | cut -d= -f2- || echo 1)
+    mute_trig=$(grep -E '^mute_trig=' "$STATE_FILE" | cut -d= -f2- || echo audio-mute)
+    mic_trig=$(grep -E '^mic_trig=' "$STATE_FILE" | cut -d= -f2- || echo audio-micmute)
+  fi
+  case "$mute_trig" in none|"") mute_trig=audio-mute ;; esac
+  case "$mic_trig" in none|"") mic_trig=audio-micmute ;; esac
+  [[ -z "$kbd" || "$kbd" == "0" ]] && kbd=1
+
+  # Mark light before restoring so keeper exits if still racing
+  echo light >"$MODE_FILE"
+
+  hyprctl dispatch dpms on >/dev/null 2>&1 || true
+  restore_dpms_wake
+
+  restore_keyboard "$kbd"
+  root_leds_restore "$mute_trig" "$mic_trig"
+  restore_mouse_lights
+
+  led_set 'tpacpi::power' 255 2>/dev/null || led_set 'tpacpi::power' 1 || true
+
+  log "mode=light"
+  notify "Bedtime off" "Screens + lights on"
+}
+
+cmd="${1:-toggle}"
+log "cmd=$cmd"
+case "$cmd" in
+  keep-dark)
+    keep_dark_loop
+    ;;
+  on|dark)
+    save_and_dark
+    ;;
+  off|wake|light)
+    restore
+    ;;
+  toggle|"")
+    if [[ -f "$MODE_FILE" && "$(cat "$MODE_FILE" 2>/dev/null)" == "dark" ]]; then
+      restore
+    else
+      save_and_dark
+    fi
+    ;;
+  status)
+    echo "mode=$(cat "$MODE_FILE" 2>/dev/null || echo unknown)"
+    [[ -f "$STATE_FILE" ]] && cat "$STATE_FILE"
+    echo "kbd_now=$(led_get "$KBD_DEV")"
+    echo "mute_led=$(led_get platform::mute) trig=$(led_trigger_get platform::mute)"
+    echo "power_led=$(led_get tpacpi::power)"
+    if [[ -f "$KEEPER_PID_FILE" ]] && kill -0 "$(cat "$KEEPER_PID_FILE")" 2>/dev/null; then
+      echo "keeper=$(cat "$KEEPER_PID_FILE") running"
+    else
+      echo "keeper=stopped"
+    fi
+    echo "dpms_key_wake=$(hypr_opt_int misc:key_press_enables_dpms)"
+    echo "dpms_mouse_wake=$(hypr_opt_int misc:mouse_move_enables_dpms)"
+    ;;
+  *)
+    echo "Usage: bedtime-mode [toggle|on|off|status]" >&2
+    exit 2
+    ;;
+esac

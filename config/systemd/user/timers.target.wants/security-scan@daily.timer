@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily critical security scan
+
+[Timer]
+OnCalendar=*-*-* 08:30:00
+OnBootSec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

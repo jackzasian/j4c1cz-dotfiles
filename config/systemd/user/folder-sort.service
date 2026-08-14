@@ -1,0 +1,7 @@
+[Unit]
+Description=Sort loose home-directory files into _Sorted layout
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/folder-sort-scheduled
+Environment=HOME=%h

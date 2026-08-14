@@ -1,0 +1,11 @@
+[Unit]
+Description=Keyboard backlight day/night schedule
+
+[Timer]
+OnCalendar=*-*-* 07:00:00
+OnCalendar=*-*-* 19:00:00
+OnBootSec=2min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
