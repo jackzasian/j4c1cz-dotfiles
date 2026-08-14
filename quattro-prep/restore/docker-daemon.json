@@ -1,0 +1,14 @@
+{
+    "log-driver": "json-file",
+    "log-opts": {
+        "max-size": "10m",
+        "max-file": "5"
+    },
+    "dns": [
+        "223.5.5.5",
+        "119.29.29.29"
+    ],
+    "bip": "172.17.0.1/16",
+    "ip-forward-no-drop": true,
+    "userland-proxy": false
+}

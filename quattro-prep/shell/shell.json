@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "bar": {
+    "position": "top",
+    "transparent": false,
+    "centerAnchor": "omarchy.clock",
+    "layout": {
+      "left": [
+        { "id": "omarchy.menu" },
+        { "id": "omarchy.workspaces" }
+      ],
+      "center": [
+        { "id": "omarchy.clock", "format": "dddd HH:mm", "formatAlt": "d MMMM 'W'ww yyyy" },
+        { "id": "ai-claude-code", "type": "command", "exec": "~/.config/omarchy/bar/scripts/ai-tool-status.sh cc", "interval": 2, "tooltip": true },
+        { "id": "ai-cursor", "type": "command", "exec": "~/.config/omarchy/bar/scripts/ai-tool-status.sh cu", "interval": 2, "tooltip": true },
+        { "id": "ai-claude-desktop", "type": "command", "exec": "~/.config/omarchy/bar/scripts/ai-tool-status.sh cd", "interval": 2, "tooltip": true, "onClick": "omarchy-launch-or-focus com.anthropic.Claude \"uwsm-app -- /home/jackz/.local/bin/claude-launch\"", "onClickRight": "pkill -f '/usr/lib/claude-desktop/claude' ; sleep 1 ; uwsm-app -- /home/jackz/.local/bin/claude-launch" },
+        { "id": "ai-opencode", "type": "command", "exec": "~/.config/omarchy/bar/scripts/ai-tool-status.sh oc", "interval": 2, "tooltip": true },
+        { "id": "tasknotes", "type": "command", "exec": "~/.config/omarchy/bar/scripts/tasknotes-upcoming.py", "interval": 20, "tooltip": true, "onClick": "omarchy-shell -q shell reloadConfig; uwsm-app -- obsidian", "onClickRight": "~/.config/omarchy/bar/scripts/tasknotes-upcoming.py --force >/dev/null; omarchy-shell -q shell reloadConfig" },
+        { "id": "voxtype", "type": "command", "exec": "omarchy-voxtype-status", "interval": 5, "tooltip": true, "onClick": "omarchy-voxtype-model", "onClickRight": "omarchy-voxtype-config" },
+        { "id": "omarchy.indicators", "items": ["ScreenRecording", "Dnd"] },
+        { "id": "omarchy.weather" },
+        { "id": "omarchy.system-update" }
+      ],
+      "right": [
+        { "id": "omarchy.tray" },
+        { "id": "hermes-gateway", "type": "command", "exec": "~/.config/omarchy/bar/scripts/agents-status.sh", "interval": 10, "tooltip": true },
+        { "id": "clash-geo", "type": "command", "exec": "~/.config/omarchy/bar/scripts/clash-geo-status.sh", "interval": 60, "tooltip": true, "onClick": "uwsm-app -- clash-verge", "onClickRight": "rm -f ~/.cache/waybar-status/clash-geo.json; omarchy-shell -q shell reloadConfig" },
+        { "id": "omarchy.tailscale" },
+        { "id": "syncthing", "type": "command", "exec": "~/.config/omarchy/bar/scripts/syncthing-status.sh", "interval": 15, "tooltip": true, "onClick": "xdg-open http://127.0.0.1:8384" },
+        { "id": "kdeconnect", "type": "command", "exec": "~/.config/omarchy/bar/scripts/kdeconnect-status.sh", "interval": 5, "onClick": "uwsm-app -- kdeconnect-app", "tooltip": true },
+        { "id": "omarchy.bluetooth" },
+        { "id": "omarchy.monitor" },
+        { "id": "omarchy.audio" },
+        { "id": "omarchy.microphone" },
+        { "id": "omarchy.network" },
+        { "id": "omarchy.power" }
+      ]
+    }
+  },
+  "plugins": [
+    { "id": "omarchy.agents" }
+  ]
+}

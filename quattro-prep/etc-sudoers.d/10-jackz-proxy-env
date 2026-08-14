@@ -1,0 +1,11 @@
+# Replaces the `sudo pacman` -> `sudo -E pacman` patches to omarchy-pkg-add,
+# -drop, -install and -remove, which cannot be reapplied under Quattro (those
+# commands are package-owned at /usr/bin).
+#
+# Scope note: pacman's own downloads already go through Clash via the
+# XferCommand in /etc/pacman.conf, so this is belt-and-braces for helpers that
+# curl/git directly under sudo. If you would rather not let a user-set env var
+# influence root's network path, skip this file — pacman still works.
+#
+# ALL_PROXY / all_proxy are deliberately NOT kept: SOCKS breaks AUR git clones.
+Defaults env_keep += "http_proxy https_proxy HTTP_PROXY HTTPS_PROXY no_proxy NO_PROXY"
