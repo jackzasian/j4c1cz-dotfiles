@@ -1,0 +1,137 @@
+diff --git i/bin/omarchy-pkg-add w/bin/omarchy-pkg-add
+index 4db19e05..5d4961cf 100755
+--- i/bin/omarchy-pkg-add
++++ w/bin/omarchy-pkg-add
+@@ -6,7 +6,7 @@
+ # omarchy:requires-sudo=true
+ 
+ if omarchy-pkg-missing "$@"; then
+-  sudo pacman -S --noconfirm --needed "$@" || exit 1
++  sudo -E pacman -S --noconfirm --needed "$@" || exit 1
+ fi
+ 
+ for pkg in "$@"; do
+diff --git i/bin/omarchy-pkg-aur-accessible w/bin/omarchy-pkg-aur-accessible
+index fae95172..3ec5f19f 100755
+--- i/bin/omarchy-pkg-aur-accessible
++++ w/bin/omarchy-pkg-aur-accessible
+@@ -2,5 +2,13 @@
+ 
+ # omarchy:summary=Returns true if the AUR is up and available.
+ 
+-curl -sf --connect-timeout 30 --retry 3 --retry-delay 3 -A "omarchy-update" \
++# shellcheck source=/dev/null
++source "${HOME}/.local/bin/omarchy-pkg-aur-env" 2>/dev/null || true
++
++port=7897
++if [[ -f ${HOME}/.local/share/io.github.clash-verge-rev.clash-verge-rev/config.yaml ]]; then
++  port=$(awk '/^mixed-port:/ {print $2; exit}' "${HOME}/.local/share/io.github.clash-verge-rev.clash-verge-rev/config.yaml")
++fi
++
++curl -sf --proxy "http://127.0.0.1:${port}" --connect-timeout 30 --retry 3 --retry-delay 3 -A "omarchy-update" \
+   "https://aur.archlinux.org/rpc/?v=5&type=info&arg=base" >/dev/null
+diff --git i/bin/omarchy-pkg-aur-add w/bin/omarchy-pkg-aur-add
+index 7a152be7..d746a2be 100755
+--- i/bin/omarchy-pkg-aur-add
++++ w/bin/omarchy-pkg-aur-add
+@@ -3,6 +3,9 @@
+ # omarchy:summary=Add the named packages to the system from the AUR if they're missing. Returns false if it couldn't be done.
+ # omarchy:args=<packages...>
+ 
++# shellcheck source=/dev/null
++source "${HOME}/.local/bin/omarchy-pkg-aur-env" 2>/dev/null || true
++
+ if omarchy-pkg-missing "$@"; then
+   yay -S --noconfirm --needed "$@" || exit 1
+ fi
+diff --git i/bin/omarchy-pkg-drop w/bin/omarchy-pkg-drop
+index 7e5dd4b2..18d841e1 100755
+--- i/bin/omarchy-pkg-drop
++++ w/bin/omarchy-pkg-drop
+@@ -6,11 +6,11 @@
+ 
+ installed=()
+ for pkg in "$@"; do
+-  if pacman -Qq | grep -Fxq "$pkg"; then
++  if pacman -Q "$pkg" &>/dev/null; then
+     installed+=("$pkg")
+   fi
+ done
+ 
+ if (( ${#installed[@]} > 0 )); then
+-  sudo pacman -Rns --noconfirm "${installed[@]}"
++  sudo -E pacman -Rns --noconfirm "${installed[@]}"
+ fi
+diff --git i/bin/omarchy-pkg-install w/bin/omarchy-pkg-install
+index 15e5e288..8164bdd0 100755
+--- i/bin/omarchy-pkg-install
++++ w/bin/omarchy-pkg-install
+@@ -21,6 +21,6 @@ if [[ -n $pkg_names ]]; then
+   source omarchy-sudo-keepalive
+ 
+   # Convert newline-separated selections to space-separated for pacman
+-  echo "$pkg_names" | tr '\n' ' ' | xargs sudo pacman -S --noconfirm
++  echo "$pkg_names" | tr '\n' ' ' | xargs sudo -E pacman -S --noconfirm
+   omarchy-show-done
+ fi
+diff --git i/bin/omarchy-pkg-remove w/bin/omarchy-pkg-remove
+index 486d3772..4d445207 100755
+--- i/bin/omarchy-pkg-remove
++++ w/bin/omarchy-pkg-remove
+@@ -19,6 +19,6 @@ pkg_names=$(yay -Qqe | fzf "${fzf_args[@]}")
+ 
+ if [[ -n $pkg_names ]]; then
+   # Convert newline-separated selections to space-separated for yay
+-  echo "$pkg_names" | tr '\n' ' ' | xargs sudo pacman -Rns --noconfirm
++  echo "$pkg_names" | tr '\n' ' ' | xargs sudo -E pacman -Rns --noconfirm
+   omarchy-show-done
+ fi
+diff --git i/bin/omarchy-update-aur-pkgs w/bin/omarchy-update-aur-pkgs
+index 4f496b33..efbfdbc6 100755
+--- i/bin/omarchy-update-aur-pkgs
++++ w/bin/omarchy-update-aur-pkgs
+@@ -2,6 +2,9 @@
+ 
+ # omarchy:summary=Update AUR packages if any are installed
+ 
++# shellcheck source=/dev/null
++source "${HOME}/.local/bin/omarchy-pkg-aur-env" 2>/dev/null || true
++
+ if pacman -Qem >/dev/null; then
+   if omarchy-pkg-aur-accessible; then
+     echo -e "\e[32m\nUpdate AUR packages\e[0m"
+diff --git i/default/omarchy-skill/SKILL.md w/default/omarchy-skill/SKILL.md
+index 37ae3d12..e6604a06 100644
+--- i/default/omarchy-skill/SKILL.md
++++ w/default/omarchy-skill/SKILL.md
+@@ -160,6 +160,22 @@ Run `omarchy --help` for the full list. The most common groups:
+ 
+ **Commands:** `omarchy restart waybar`, `omarchy refresh waybar`, `omarchy toggle waybar`
+ 
++**If a laptop/docked profile-switcher is in play, `config.jsonc` may be a generated file, not the source of truth.** Check for a script like `~/.config/waybar/scripts/waybar-apply-profile.sh` (often wired into `~/.config/hypr/autostart.conf` and a monitor-watch script) before editing `config.jsonc` directly — on a Jack-style setup it overwrites `config.jsonc` from `config.laptop.jsonc` / `config.docked.jsonc` on every monitor plug/unplug event, silently reverting any edit made only to `config.jsonc`. Edit the per-profile template(s) that match, then re-apply (`cp` the template over `config.jsonc`, or just trigger the profile script) and `omarchy restart waybar`.
++
++**Waybar group `drawer` with `"click-to-reveal": true` is unreliable** — it's a [known upstream bug](https://github.com/Alexays/Waybar/issues/3625) across many Waybar versions where clicks don't register at all. Prefer the default hover-reveal (omit `click-to-reveal` or set it `false`) unless you've confirmed click actually works on the installed version.
++
++**Debugging waybar interactively:** there's usually no systemd unit for it (`journalctl --user -u waybar` returns nothing) and the normal restart script discards stdout/stderr. To capture real logs, launch it explicitly with output redirected inside the exec string (a bare `hyprctl dispatch exec "waybar --log-level trace > file"` from a detached shell won't inherit your redirection):
++```bash
++hyprctl dispatch exec "uwsm-app -- bash -c 'waybar --log-level trace > /path/to/log 2>&1'"
++```
++`hyprctl` itself needs `HYPRLAND_INSTANCE_SIGNATURE` set — from a plain Bash tool call (not already inside the graphical session) find it with `ls -t /run/user/$(id -u)/hypr/ | head -1` and export it first.
++
++**`hyprctl dispatch movecursor x y` is not reliable for testing hover-triggered UI.** It repositions the compositor's cursor but does not reliably emit the `wl_pointer` enter/motion events a GTK layer-shell client (like Waybar) needs to fire hover states — a drawer that doesn't visibly reveal under `movecursor` is inconclusive, not proof of a bug. Confirm hover behavior with the user's real mouse, or install `ydotool`/`python-evdev` for genuine synthetic input if scripted testing is required.
++
++**Custom waybar module scripts that cache (`~/.cache/waybar-status/*.json` with a TTL) will silently show stale data if the underlying input changes but isn't part of the cache key or a refresh signal.** Example: a weather module cached by TTL alone kept showing the old city for up to 15 min after `~/.config/omarchy/location.conf` changed, because the cache didn't know the city had changed. Fix pattern: embed the relevant input (e.g. city) in the cached JSON and invalidate on mismatch regardless of TTL, and have whatever script changes the input also `rm` the cache + `pkill -RTMIN+<n> waybar` (with a matching `"signal": <n>` on the module) so the bar updates immediately instead of waiting for the next poll interval.
++
++**Spotify on native Wayland (`spotify-launcher`) + HiDPI:** don't add `--force-device-scale-factor` to `~/.config/spotify-launcher.conf`'s `extra_arguments` if the compositor is already applying output scale (e.g. `scale = 2` in `monitors.conf`) — it double-scales and makes the whole UI oversized, not just fixes popups. If Spotify's context menus render broken/stretched on a scaled display, that's a separate, still-unresolved-as-of-2026 Electron/CEF popup-positioning issue on Hyprland; forcing scale factor is not the fix.
++
+ ### Terminals
+ 
+ ```
+@@ -181,6 +197,7 @@ Run `omarchy --help` for the full list. The most common groups:
+ | starship | `~/.config/starship.toml` |
+ | git | `~/.config/git/config` |
+ | walker | `~/.config/walker/config.toml` |
++| Spotify (spotify-launcher) | `~/.config/spotify-launcher.conf` (`extra_arguments`) |
+ 
+ ## Safe Customization Patterns
+ 

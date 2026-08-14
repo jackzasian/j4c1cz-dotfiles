@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Omarchy Fixed Geolocation",
+  "version": "1.0",
+  "description": "Return fixed GPS coordinates for Strava (Omarchy)",
+  "content_scripts": [
+    {
+      "matches": ["https://*.strava.com/*", "https://strava.com/*"],
+      "js": ["inject.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ]
+}

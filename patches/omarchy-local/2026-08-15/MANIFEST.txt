@@ -1,0 +1,21 @@
+Base commit: bfab1a706fcbd69eb0a2038748361efaba7c76af
+Base commit desc: bfab1a70 Retune opacity for Hyprland 0.56's corrected alpha premultiplication
+Dumped: 2026-08-15T06:26:42+08:00
+
+Modified (tracked-modifications.diff):
+  - bin/omarchy-pkg-add
+  - bin/omarchy-pkg-aur-accessible
+  - bin/omarchy-pkg-aur-add
+  - bin/omarchy-pkg-drop
+  - bin/omarchy-pkg-install
+  - bin/omarchy-pkg-remove
+  - bin/omarchy-update-aur-pkgs
+  - default/omarchy-skill/SKILL.md
+
+Untracked (copied verbatim under untracked/):
+  - default/chromium/extensions/fixed-geolocation/
+  - default/pacman/curl-proxy.sh
+
+To reapply against a fresh checkout at the same base commit:
+  cd ~/.local/share/omarchy && git checkout bfab1a706fcbd69eb0a2038748361efaba7c76af && git apply --3way /home/jackz/dotfiles/patches/omarchy-local/2026-08-15/tracked-modifications.diff
+  cp -a /home/jackz/dotfiles/patches/omarchy-local/2026-08-15/untracked/. ~/.local/share/omarchy/
