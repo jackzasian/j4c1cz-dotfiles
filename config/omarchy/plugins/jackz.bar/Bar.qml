@@ -1072,6 +1072,21 @@ Item {
       }
     }
 
+    // jackz customization 2026-08-16: a thin accent hairline along the bar's
+    // outer edge. The bar used to end in a hard flat line straight into the
+    // desktop/wallpaper below with zero separation. Horizontal positions
+    // only (top/bottom) — this machine only ever runs position: "top", and
+    // a left/right bar would need different math this wasn't worth risking
+    // blind.
+    Rectangle {
+      visible: !root.vertical && !root.transparent
+      x: 0
+      width: parent.width
+      height: 2
+      y: root.position === "top" ? parent.height - height : 0
+      color: Util.alpha(Color.accent, 0.55)
+    }
+
     PopupWindow {
       id: tooltipWindow
 
@@ -1522,7 +1537,11 @@ Item {
       id: horizontalModuleList
 
       Row {
-        spacing: 0
+        // jackz customization 2026-08-16: was 0 — every widget sat flush
+        // against its neighbor with nothing but each widget's own internal
+        // margin to tell them apart. A real gap plus the ModuleSlot chip
+        // background below is what turns "icon soup" into distinct modules.
+        spacing: Style.space(4)
 
         Repeater {
           model: moduleListRoot.entries
@@ -1540,7 +1559,7 @@ Item {
       id: verticalModuleList
 
       Column {
-        spacing: 0
+        spacing: Style.space(4)
 
         Repeater {
           model: moduleListRoot.entries
@@ -1606,6 +1625,23 @@ Item {
     }
 
     HoverHandler { id: moduleHover }
+
+    // jackz customization 2026-08-16: WidgetButton (what every command/qml/
+    // registry widget ultimately paints through) draws no background of its
+    // own — every module used to sit directly on the bar's flat fill, with
+    // nothing to separate one icon from the next but each widget's own
+    // internal margin. This gives every module its own soft "chip", plus a
+    // hover tint for free. z is implicit (declaration order): this sits
+    // before the content Loaders below, so it paints behind them.
+    Rectangle {
+      id: slotChip
+      anchors.fill: parent
+      visible: slot.width > 0 && slot.height > 0 && !slot.dragSource
+      radius: height / 2
+      color: slot.hovered ? Util.alpha(Color.accent, 0.16) : Util.alpha(Color.foreground, 0.055)
+
+      Behavior on color { ColorAnimation { duration: 140; easing.type: Easing.OutCubic } }
+    }
 
     BorderSurface {
       visible: slot.dragSource
