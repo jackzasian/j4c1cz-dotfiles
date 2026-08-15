@@ -35,7 +35,23 @@ EOF
 }
 
 hypr_blur_enabled() {
-  hyprctl getoption decoration:blur:enabled -j 2>/dev/null | jq -r '.int // .str // empty' 2>/dev/null || true
+  # jackz fix 2026-08-16: this option reports as `{"bool": true}` on this
+  # Hyprland build (Quattro's Lua config), not `.int`/`.str` — the old
+  # lookup always came back empty. Same bug class as bedtime-mode's
+  # hypr_opt_int, found while fixing that. Normalize to "1"/"0" so the
+  # `[[ $blur_before == "1" ]]` check above still works unchanged.
+  hyprctl getoption decoration:blur:enabled -j 2>/dev/null \
+    | jq -r 'if .bool == true then "1" elif .bool == false then "0" else (.int // .str // empty) end' 2>/dev/null || true
+}
+
+# jackz fix 2026-08-16: `hyprctl keyword` is rejected outright under Quattro's
+# Lua-config Hyprland ("keyword can't work with non-legacy parsers. Use
+# eval.") — but it still exits 0, so `if hyprctl keyword ...; then` below
+# always took the true branch and believed blur was disabled when it never
+# was. Found and confirmed the same bug in bedtime-mode first; fixed there
+# via `hyprctl eval` + hl.config(), same fix here.
+hypr_set_blur() {
+  hyprctl eval "hl.config({decoration = {blur = {enabled = $1}}})" >/dev/null 2>&1
 }
 
 cmd_on() {
@@ -75,7 +91,7 @@ cmd_on() {
 
   blur_before=$(hypr_blur_enabled)
   if [[ $blur_before == "1" ]]; then
-    if hyprctl keyword decoration:blur:enabled false >/dev/null 2>&1; then
+    if hypr_set_blur false; then
       blur_disabled=1
       echo "Hyprland blur: disabled (temporary)"
     fi
@@ -112,7 +128,7 @@ cmd_off() {
   fi
 
   if [[ $blur_disabled == "1" && $blur_was == "1" ]]; then
-    hyprctl keyword decoration:blur:enabled true >/dev/null 2>&1 || true
+    hypr_set_blur true || true
     echo "Hyprland blur: restored"
   fi
 
