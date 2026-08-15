@@ -1541,7 +1541,7 @@ Item {
         // against its neighbor with nothing but each widget's own internal
         // margin to tell them apart. A real gap plus the ModuleSlot chip
         // background below is what turns "icon soup" into distinct modules.
-        spacing: Style.space(4)
+        spacing: Style.space(6)
 
         Repeater {
           model: moduleListRoot.entries
@@ -1559,7 +1559,7 @@ Item {
       id: verticalModuleList
 
       Column {
-        spacing: Style.space(4)
+        spacing: Style.space(6)
 
         Repeater {
           model: moduleListRoot.entries
@@ -1633,12 +1633,21 @@ Item {
     // internal margin. This gives every module its own soft "chip", plus a
     // hover tint for free. z is implicit (declaration order): this sits
     // before the content Loaders below, so it paints behind them.
+    //
+    // Round 2 (2026-08-16, same day): the first pass used a 5.5% white wash
+    // over the bar fill — Jack's call was "still looks bad", and at that
+    // alpha it's nearly invisible against #2e3440, which is exactly the
+    // kind of change that reads as "nothing happened." Color.muted is
+    // theme's own distinctly-lighter secondary surface tone (Nord: #4c566a
+    // vs the bar's #2e3440 — a real hue+lightness step, not just an alpha
+    // wash), matching how the SketchyBar/waybar references actually do it:
+    // a genuinely different fill color per module, not a subtle tint.
     Rectangle {
       id: slotChip
       anchors.fill: parent
       visible: slot.width > 0 && slot.height > 0 && !slot.dragSource
       radius: height / 2
-      color: slot.hovered ? Util.alpha(Color.accent, 0.16) : Util.alpha(Color.foreground, 0.055)
+      color: slot.hovered ? Util.alpha(Color.accent, 0.38) : Util.alpha(Color.muted, 0.6)
 
       Behavior on color { ColorAnimation { duration: 140; easing.type: Easing.OutCubic } }
     }

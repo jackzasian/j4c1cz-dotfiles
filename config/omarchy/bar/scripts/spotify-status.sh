@@ -41,7 +41,7 @@ class="playing"
 # *display* width instead (East Asian Width-aware: wide/fullwidth glyphs cost
 # 2, everything else costs 1), so a Chinese title and an English title of the
 # same MAX_LABEL both land at roughly the same on-screen width.
-MAX_LABEL="${SPOTIFY_STATUS_MAX_LABEL:-30}"
+MAX_LABEL="${SPOTIFY_STATUS_MAX_LABEL:-22}"
 
 python3 -c '
 import json, sys, unicodedata
