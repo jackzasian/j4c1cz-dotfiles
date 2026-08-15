@@ -1,0 +1,19 @@
+#!/bin/bash
+# Shim shadowing /usr/bin/omarchy-pkg-aur-accessible (Quattro, package-owned).
+#
+# The packaged version curls aur.archlinux.org with no proxy, which always fails
+# behind the GFW, so omarchy-update-aur-pkgs concludes the AUR is down and skips
+# every AUR update. Pre-Quattro this was patched directly in the git checkout;
+# that tree is now pacman-owned, so shim instead — shims survive package updates.
+#
+# Requires ~/.local/bin ahead of /usr/bin in PATH (uwsm env.d 99-jackz-path.conf).
+set -euo pipefail
+
+port=7897
+cfg="$HOME/.local/share/io.github.clash-verge-rev.clash-verge-rev/config.yaml"
+[[ -f $cfg ]] && port=$(awk '/^mixed-port:/ {print $2; exit}' "$cfg")
+[[ -n ${port:-} ]] || port=7897
+
+curl -sf --proxy "http://127.0.0.1:${port}" \
+  --connect-timeout 30 --retry 3 --retry-delay 3 -A "omarchy-update" \
+  "https://aur.archlinux.org/rpc/?v=5&type=info&arg=base" >/dev/null

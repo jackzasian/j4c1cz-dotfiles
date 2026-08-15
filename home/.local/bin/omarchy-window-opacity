@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# Quickly adjust window transparency without editing Lua by hand.
+# Edits the "default-opacity" window rule in ~/.config/hypr/looknfeel.lua
+# (active-window-opacity inactive-window-opacity, each 0.0-1.0) and reloads.
+set -euo pipefail
+
+LOOKNFEEL="${HOME}/.config/hypr/looknfeel.lua"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  omarchy-window-opacity show                    Print current active/inactive opacity
+  omarchy-window-opacity more [step]              More transparent (default step: 0.1)
+  omarchy-window-opacity less [step]               Less transparent (default step: 0.1)
+  omarchy-window-opacity set <active> <inactive>   Set exact values, e.g.: set 0.9 0.8
+  omarchy-window-opacity reset                     Back to Quattro stock (0.985 0.96)
+  omarchy-window-opacity blur <on|off>             Toggle background blur
+
+Values are 0.0 (fully transparent) to 1.0 (fully opaque).
+EOF
+}
+
+current() {
+  grep -oE 'opacity = "[0-9.]+ [0-9.]+"' "$LOOKNFEEL" | head -1 | grep -oE '[0-9.]+' | tr '\n' ' '
+}
+
+clamp() {
+  python3 -c "print(max(0.0, min(1.0, round($1, 3))))"
+}
+
+write_opacity() {
+  local active="$1" inactive="$2"
+  python3 - "$LOOKNFEEL" "$active" "$inactive" <<'PY'
+import re, sys
+path, active, inactive = sys.argv[1:4]
+content = open(path).read()
+new_content = re.sub(
+    r'opacity = "[0-9.]+ [0-9.]+"',
+    f'opacity = "{active} {inactive}"',
+    content,
+    count=1,
+)
+if new_content == content:
+    print("Couldn't find the opacity rule in looknfeel.lua -- has it been edited since?", file=sys.stderr)
+    sys.exit(1)
+open(path, "w").write(new_content)
+PY
+}
+
+apply() {
+  hyprctl reload >/dev/null 2>&1
+  echo "Applied: active=$1 inactive=$2"
+}
+
+cmd="${1:-show}"
+case "$cmd" in
+  show)
+    read -r a i < <(current) || true
+    echo "active=${a}  inactive=${i}"
+    ;;
+  more|less)
+    step="${2:-0.1}"
+    read -r a i < <(current) || true
+    sign=-1; [[ "$cmd" == less ]] && sign=1
+    new_a=$(clamp "$(python3 -c "print(${a} + ${sign}*${step})")")
+    new_i=$(clamp "$(python3 -c "print(${i} + ${sign}*${step})")")
+    write_opacity "$new_a" "$new_i"
+    apply "$new_a" "$new_i"
+    ;;
+  set)
+    [[ $# -eq 3 ]] || { usage; exit 1; }
+    write_opacity "$2" "$3"
+    apply "$2" "$3"
+    ;;
+  reset)
+    write_opacity "0.985" "0.96"
+    apply "0.985" "0.96"
+    ;;
+  blur)
+    [[ $# -eq 2 ]] || { usage; exit 1; }
+    val="false"; [[ "$2" == "on" ]] && val="true"
+    python3 -c "
+import re
+path = '${LOOKNFEEL}'
+content = open(path).read()
+content = re.sub(r'enabled = (true|false), size = 4', f'enabled = ${val}, size = 4', content, count=1)
+open(path, 'w').write(content)
+"
+    hyprctl reload >/dev/null 2>&1
+    echo "Blur: $2"
+    ;;
+  -h|--help|help)
+    usage
+    ;;
+  *)
+    usage; exit 1
+    ;;
+esac

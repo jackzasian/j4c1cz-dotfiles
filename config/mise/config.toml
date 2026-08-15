@@ -1,2 +1,5 @@
 [tools]
+claude = "latest"
+codex = "latest"
 node = "26.1.0"
+opencode = "latest"

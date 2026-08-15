@@ -1,0 +1,31 @@
+#!/bin/bash
+# Runs AFTER `omarchy refresh pacman` copies its channel template over
+# /etc/pacman.conf and BEFORE `pacman -Syyuu`. The template ships no
+# XferCommand, so without this every pacman download bypasses Clash and the
+# refresh fails (or silently goes direct) behind the GFW.
+set -euo pipefail
+
+CONF=/etc/pacman.conf
+XFER='XferCommand = /etc/pacman.d/curl-proxy.sh %u %o'
+
+[[ -x /etc/pacman.d/curl-proxy.sh ]] || {
+  echo "pre-refresh-pacman: /etc/pacman.d/curl-proxy.sh missing or not executable — NOT restoring XferCommand" >&2
+  exit 1
+}
+
+if ! grep -qxF "$XFER" "$CONF"; then
+  sudo sed -i "/^\[options\]/a $XFER" "$CONF"
+  echo "pre-refresh-pacman: restored XferCommand"
+fi
+
+# XferCommand serialises downloads; 5 parallel streams just thrash the proxy.
+if grep -qE '^ParallelDownloads' "$CONF"; then
+  sudo sed -i 's/^ParallelDownloads.*/ParallelDownloads = 1/' "$CONF"
+else
+  sudo sed -i '/^\[options\]/a ParallelDownloads = 1' "$CONF"
+fi
+
+grep -qxF 'DisableDownloadTimeout' "$CONF" || \
+  sudo sed -i '/^\[options\]/a DisableDownloadTimeout' "$CONF"
+
+echo "pre-refresh-pacman: pacman.conf proxy settings in place"

@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# Adjust ONLY the app-related bar icons (AI tool chips/Spotify/etc. in
+# shell.json, and the per-workspace app icons in jackz.workspaces) --
+# deliberately independent of `omarchy-bar-scale`, which now leaves these
+# alone on purpose. Two different pixel sizes under the hood (shell.json
+# widget fontSize vs. the workspace plugin's fixed Image width/height), one
+# command to move both together.
+set -euo pipefail
+
+SHELL_JSON="${HOME}/.config/omarchy/shell.json"
+WORKSPACES_QML="${HOME}/.config/omarchy/plugins/jackz.workspaces/Workspaces.qml"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  omarchy-app-icon-size show           Print current sizes
+  omarchy-app-icon-size set <px>       Set both to an exact pixel size, e.g.: set 20
+  omarchy-app-icon-size bigger [step]  Nudge up (default step: 2px)
+  omarchy-app-icon-size smaller [step]
+EOF
+}
+
+current_chip() { grep -oE '"fontSize": [0-9]+' "$SHELL_JSON" | head -1 | grep -oE '[0-9]+'; }
+current_ws()   { grep -oE 'width: [0-9]+$' "$WORKSPACES_QML" | head -1 | grep -oE '[0-9]+'; }
+
+write_chip() {
+  python3 - "$SHELL_JSON" "$1" <<'PY'
+import json, sys
+path, size = sys.argv[1], int(sys.argv[2])
+d = json.load(open(path))
+def walk(node):
+    if isinstance(node, dict):
+        if node.get("type") == "command":
+            node["fontSize"] = size
+        for v in node.values():
+            walk(v)
+    elif isinstance(node, list):
+        for v in node:
+            walk(v)
+walk(d)
+json.dump(d, open(path, "w"), indent=2)
+PY
+}
+
+write_ws() {
+  python3 - "$WORKSPACES_QML" "$1" <<'PY'
+import re, sys
+path, size = sys.argv[1], sys.argv[2]
+content = open(path).read()
+content = re.sub(r'width: \d+\n(\s+)height: \d+', f'width: {size}\n\\1height: {size}', content, count=1)
+open(path, "w").write(content)
+PY
+}
+
+apply() {
+  write_chip "$1"
+  write_ws "$1"
+  omarchy-shell -q shell reloadConfig >/dev/null 2>&1 || true
+  omarchy restart shell >/dev/null 2>&1 || true  # workspace plugin QML needs a real restart to pick up (see quattro-bar-and-desktop-customization.md)
+  echo "Applied: ${1}px"
+}
+
+cmd="${1:-show}"
+case "$cmd" in
+  show)
+    echo "chip fontSize=$(current_chip)px  workspace icon=$(current_ws)px"
+    ;;
+  set)
+    [[ $# -eq 2 ]] || { usage; exit 1; }
+    apply "$2"
+    ;;
+  bigger|smaller)
+    step="${2:-2}"
+    cur="$(current_chip)"
+    sign=1; [[ "$cmd" == smaller ]] && sign=-1
+    new=$((cur + sign * step))
+    apply "$new"
+    ;;
+  -h|--help|help)
+    usage
+    ;;
+  *)
+    usage; exit 1
+    ;;
+esac

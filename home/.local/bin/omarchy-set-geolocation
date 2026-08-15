@@ -3,7 +3,7 @@
 set -euo pipefail
 
 LOC="${HOME}/.config/omarchy/location.conf"
-EXT_DIR="${HOME}/.local/share/omarchy/default/chromium/extensions/fixed-geolocation"
+EXT_DIR="${HOME}/.local/share/chromium-extensions/fixed-geolocation"
 ZEN_USER_GLOB="${HOME}/.config/zen/"*/user.js
 
 detect_location() {
@@ -197,7 +197,7 @@ PY
 
 apply_chromium_flags() {
   local flags="${HOME}/.config/chromium-flags.conf"
-  local copy_ext="${HOME}/.local/share/omarchy/default/chromium/extensions/copy-url"
+  local copy_ext="/usr/share/omarchy/default/chromium/extensions/copy-url"
   local geo_ext="${EXT_DIR}"
   local port
   port=$(_clash_mixed_port 2>/dev/null || echo 7897)

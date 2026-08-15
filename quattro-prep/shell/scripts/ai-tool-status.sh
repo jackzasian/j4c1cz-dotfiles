@@ -49,7 +49,7 @@ busy_delta() {
   local pids=("$@")
   (( ${#pids[@]} == 0 )) && return 1
   local result
-  result="$(python3 "${HOME}/.config/waybar/scripts/proc-cpu-delta.py" "${state_key}" "${threshold}" "${pids[@]}")"
+  result="$(python3 "${HOME}/.config/omarchy/bar/scripts/proc-cpu-delta.py" "${state_key}" "${threshold}" "${pids[@]}")"
   [[ "${result}" == "1" ]]
 }
 

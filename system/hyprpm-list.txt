@@ -1,18 +1,18 @@
+[0m→[0m Repository Hyprspace (by 0xl30):
+  │ Plugin Hyprspace
+  └─ enabled: [32mtrue
+[0m
 [0m→[0m Repository dynamic-cursors (by VirtCode):
   │ Plugin dynamic-cursors
-  └─ enabled: [32mtrue
+  └─ enabled: [31mfalse
 [0m
 [0m→[0m Repository hyprgrass (by horriblename):
   │ Plugin hyprgrass
   └─ enabled: [32mtrue
 [0m
   │ Plugin hyprgrass-backlight
-  └─ enabled: [32mtrue
+  └─ enabled: [31mfalse
 [0m
   │ Plugin hyprgrass-pulse
-  └─ enabled: [32mtrue
-[0m
-[0m→[0m Repository Hyprspace (by 0xl30):
-  │ Plugin Hyprspace
   └─ enabled: [32mtrue
 [0m

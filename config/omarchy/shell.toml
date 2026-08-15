@@ -1,0 +1,16 @@
+# Machine-level override, merged over the active theme's generated shell.toml.
+# See /usr/share/omarchy/default/themed/shell.toml.tpl for every available key.
+# Managed by omarchy-bar-scale -- edit by hand or via that command, both fine.
+
+[spacing]
+scale = 0.75
+
+[bar]
+size-horizontal = 25
+# Shrinks only the built-in icon-only widgets (audio/network/bluetooth/power/
+# monitor/tray/menu) via Style.bar.iconFont, independent of [font].base-size
+# which everything else (clock, tooltips, popups) still follows.
+icon-font = 11
+
+[font]
+base-size = 12

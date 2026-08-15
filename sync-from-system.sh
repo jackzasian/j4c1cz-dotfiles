@@ -3,10 +3,12 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIRS=(
-  hypr waybar omarchy fastfetch alacritty foot ghostty kitty mako walker
-  swayosd btop lazygit uwsm environment.d git fontconfig
+  hypr omarchy fastfetch alacritty foot ghostty kitty
+  btop lazygit uwsm environment.d git fontconfig
   fcitx5 mise starship.toml systemd/user
 )
+# waybar, walker, mako, swayosd retired by the Quattro migration (2026-08-15) —
+# no live ~/.config source anymore, see legacy-omarchy3/README.md.
 
 mkdir -p "${ROOT}/config" "${ROOT}/home" "${ROOT}/patches"
 for item in "${CONFIG_DIRS[@]}"; do

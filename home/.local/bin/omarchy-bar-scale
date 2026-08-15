@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+# Quickly adjust the Quattro bar's size/spacing without editing TOML by hand.
+# Edits ~/.config/omarchy/shell.toml ([spacing].scale, [bar].size-horizontal,
+# [font].base-size) and restarts the shell to apply.
+set -euo pipefail
+
+TOML="${HOME}/.config/omarchy/shell.toml"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  omarchy-bar-scale show                          Print current values
+  omarchy-bar-scale bigger [step]                  Nudge everything up (default step: 0.08)
+  omarchy-bar-scale smaller [step]                 Nudge everything down (default step: 0.08)
+  omarchy-bar-scale reset                          Back to Quattro stock (removes the override file)
+  omarchy-bar-scale set <spacing> <height> <font>  Set exact values, e.g.: set 1.0 28 14
+
+spacing: [spacing].scale multiplier (Quattro stock: 1.0)
+height:  [bar].size-horizontal in px (Quattro stock: 26)
+font:    [font].base-size in px (Quattro stock: 12)
+EOF
+}
+
+current() {
+  python3 - "$TOML" <<'PY'
+import sys, re
+try:
+    content = open(sys.argv[1]).read()
+except FileNotFoundError:
+    print("1.0 26 12")
+    sys.exit(0)
+def find(section, key, default):
+    m = re.search(rf'\[{section}\][^\[]*?^{key}\s*=\s*([\d.]+)', content, re.M | re.S)
+    return m.group(1) if m else default
+print(find("spacing", "scale", "1.0"), find("bar", "size-horizontal", "26"), find("font", "base-size", "12"))
+PY
+}
+
+write_toml() {
+  local spacing="$1" height="$2" font="$3"
+  python3 - "$TOML" "$spacing" "$height" "$font" <<'PY'
+import sys
+path, spacing, height, font = sys.argv[1:5]
+content = f"""# Machine-level override, merged over the active theme's generated shell.toml.
+# See /usr/share/omarchy/default/themed/shell.toml.tpl for every available key.
+# Managed by omarchy-bar-scale -- edit by hand or via that command, both fine.
+
+[spacing]
+scale = {spacing}
+
+[bar]
+size-horizontal = {height}
+
+[font]
+base-size = {font}
+"""
+open(path, "w").write(content)
+PY
+}
+
+SHELL_JSON="${HOME}/.config/omarchy/shell.json"
+
+# DECOUPLED 2026-08-15: this used to sync CustomCommandModule widgets' (AI
+# tool chips, Spotify, etc.) fontSize to [font].base-size + 2 on every apply,
+# same for the workspace plugin's app-icon pixel size. jackz wants the app
+# icons to hold still while everything else scales, so this command no
+# longer touches either -- see `omarchy-app-icon-size` for that, separately.
+# (shell.json's per-widget "fontSize" and jackz.workspaces' icon width/height
+# are both plain fixed values now, immune to [spacing].scale on purpose.)
+
+apply() {
+  # Soft reload first, not `omarchy restart shell` -- the full restart kills
+  # and relaunches the whole quickshell process, and doing that repeatedly in
+  # quick succession (exactly what this command invites -- run it a few times
+  # to dial in a size) hits a real Quickshell-internal race that crashes a
+  # transient helper process mid-handoff. Self-heals via Quickshell's own
+  # watchdog either way, but soft reload avoids it entirely for changes that
+  # are just data (shell.toml/shell.json values), not plugin code.
+  omarchy-shell -q shell reloadConfig >/dev/null 2>&1 || omarchy restart shell >/dev/null 2>&1 || true
+  echo "Applied: spacing=$1 height=$2 font=$3 (app icons unaffected -- see omarchy-app-icon-size)"
+}
+
+cmd="${1:-show}"
+case "$cmd" in
+  show)
+    read -r sp h f < <(current) || true
+    echo "spacing.scale=${sp}  bar.size-horizontal=${h}  font.base-size=${f}"
+    ;;
+  bigger|smaller)
+    step="${2:-0.08}"
+    read -r sp h f < <(current) || true
+    sign=1; [[ "$cmd" == smaller ]] && sign=-1
+    new_sp=$(python3 -c "print(round(${sp} + ${sign}*${step}, 3))")
+    new_h=$(python3 -c "print(round(${h} * (1 + ${sign}*${step})))")
+    new_f=$(python3 -c "print(round(${f} * (1 + ${sign}*${step})))")
+    write_toml "$new_sp" "$new_h" "$new_f"
+    apply "$new_sp" "$new_h" "$new_f"
+    ;;
+  reset)
+    rm -f "$TOML"
+    omarchy restart shell >/dev/null 2>&1 || true
+    echo "Removed override, back to Quattro stock."
+    ;;
+  set)
+    [[ $# -eq 4 ]] || { usage; exit 1; }
+    write_toml "$2" "$3" "$4"
+    apply "$2" "$3" "$4"
+    ;;
+  -h|--help|help)
+    usage
+    ;;
+  *)
+    usage; exit 1
+    ;;
+esac
