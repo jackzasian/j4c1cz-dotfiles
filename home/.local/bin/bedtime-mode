@@ -42,8 +42,35 @@ led_trigger_get() {
 }
 
 hypr_opt_int() {
-  hyprctl getoption "$1" -j 2>/dev/null | jq -r '.int // empty' 2>/dev/null \
-    || hyprctl getoption "$1" 2>/dev/null | awk '/^int:/{print $2; exit}'
+  # jackz fix 2026-08-16: misc:*_enables_dpms report as `bool` (`{"bool":
+  # true}`), not `int`, on this Hyprland build — the old `.int`-only lookup
+  # always came back empty, so save_dpms_wake_opts() silently fell through
+  # to its "1" fallback every time regardless of actual state (harmless
+  # here since 1/enabled is the sane default anyway, but not the real
+  # value). Try int first for options that do report it, then bool.
+  local out
+  out=$(hyprctl getoption "$1" -j 2>/dev/null | jq -r '.int // empty' 2>/dev/null)
+  if [[ -n "$out" ]]; then
+    echo "$out"
+    return
+  fi
+  hyprctl getoption "$1" -j 2>/dev/null | jq -r 'if .bool == true then "1" elif .bool == false then "0" else empty end' 2>/dev/null \
+    || hyprctl getoption "$1" 2>/dev/null | awk '/^int:/{print $2; exit} /^bool:/{print ($2=="true")?"1":"0"; exit}'
+}
+
+# jackz fix 2026-08-16: `hyprctl keyword <opt> <val>` silently no-ops under
+# Quattro's Lua-config Hyprland ("keyword can't work with non-legacy parsers.
+# Use eval." — swallowed by every call site's `|| true`, so this failed dead
+# silent since the migration). Every misc:*_enables_dpms write below used
+# `hyprctl keyword`, so DPMS-wake-on-input was NEVER actually disabled: the
+# option always stayed at its true default, every keypress re-woke the
+# screen mid-"dark", and the keeper loop fought that in a ~0.35s re-blank
+# loop forever — the flicker Jack hit live. Fixed via `hyprctl eval` with
+# the equivalent hl.config() Lua table, confirmed working by hand first
+# (read-back actually changes, unlike keyword's silent no-op).
+hypr_set_bool() {
+  local option="$1" value="$2"
+  hyprctl eval "hl.config({misc = {${option} = ${value}}})" >/dev/null 2>&1 || true
 }
 
 save_dpms_wake_opts() {
@@ -55,8 +82,8 @@ save_dpms_wake_opts() {
 
 disable_dpms_wake() {
   save_dpms_wake_opts
-  hyprctl keyword misc:key_press_enables_dpms false >/dev/null 2>&1 || true
-  hyprctl keyword misc:mouse_move_enables_dpms false >/dev/null 2>&1 || true
+  hypr_set_bool key_press_enables_dpms false
+  hypr_set_bool mouse_move_enables_dpms false
 }
 
 restore_dpms_wake() {
@@ -66,14 +93,14 @@ restore_dpms_wake() {
     mouse=$(grep -E '^mouse=' "$DPMS_OPTS_FILE" | cut -d= -f2- || echo 1)
   fi
   if [[ "$key" == "1" || "$key" == "true" ]]; then
-    hyprctl keyword misc:key_press_enables_dpms true >/dev/null 2>&1 || true
+    hypr_set_bool key_press_enables_dpms true
   else
-    hyprctl keyword misc:key_press_enables_dpms false >/dev/null 2>&1 || true
+    hypr_set_bool key_press_enables_dpms false
   fi
   if [[ "$mouse" == "1" || "$mouse" == "true" ]]; then
-    hyprctl keyword misc:mouse_move_enables_dpms true >/dev/null 2>&1 || true
+    hypr_set_bool mouse_move_enables_dpms true
   else
-    hyprctl keyword misc:mouse_move_enables_dpms false >/dev/null 2>&1 || true
+    hypr_set_bool mouse_move_enables_dpms false
   fi
 }
 
@@ -126,8 +153,8 @@ keep_dark_loop() {
 
     key_opt=$(hypr_opt_int misc:key_press_enables_dpms)
     if [[ "$key_opt" == "1" ]]; then
-      hyprctl keyword misc:key_press_enables_dpms false >/dev/null 2>&1 || true
-      hyprctl keyword misc:mouse_move_enables_dpms false >/dev/null 2>&1 || true
+      hypr_set_bool key_press_enables_dpms false
+      hypr_set_bool mouse_move_enables_dpms false
       log "keeper: re-disabled dpms wake"
     fi
 
@@ -154,31 +181,25 @@ start_keeper() {
   log "keeper: started pid=$(cat "$KEEPER_PID_FILE")"
 }
 
+# jackz fix 2026-08-16: these two used to inline the LED loop in a `sudo -n
+# bash -c '...'` heredoc. `-n` means "never prompt, fail if auth would be
+# needed" — fine IF there's a fresh cached classic-sudo timestamp, silently
+# a no-op otherwise (confirmed live: two calls failed back-to-back per
+# sudo's own non-interactive-refusal log line, 19:59 and 20:06). A keybind
+# toggle can't be expected to have a warm sudo cache, and prompting here
+# would defeat the point of a quick toggle anyway. Split the root part into
+# its own stable-path script (bedtime-led-ctl) so a narrow NOPASSWD sudoers
+# rule can cover exactly this and nothing else — see
+# ~/dotfiles/quattro-prep/etc-sudoers.d/20-jackz-bedtime-leds (not installed
+# until Jack runs it; needs his interactive sudo).
 root_leds_dark() {
-  "$SUDO" -n bash -c '
-    for led in platform::mute platform::micmute; do
-      [[ -w /sys/class/leds/$led/trigger ]] && echo none > "/sys/class/leds/$led/trigger"
-      [[ -w /sys/class/leds/$led/brightness ]] && echo 0 > "/sys/class/leds/$led/brightness"
-    done
-    for i in 0 7 10 12; do
-      echo "$i off" > /proc/acpi/ibm/led 2>/dev/null || true
-    done
-    for led in tpacpi::power tpacpi::standby tpacpi::lid_logo_dot tpacpi::thinkvantage tpacpi::thinklight; do
-      [[ -w /sys/class/leds/$led/brightness ]] && echo 0 > "/sys/class/leds/$led/brightness"
-    done
-  ' 2>/dev/null || true
+  "$SUDO" -n "${HOME}/.local/bin/bedtime-led-ctl" dark >/dev/null 2>&1 || true
 }
 
 root_leds_restore() {
   local mute_trig="${1:-audio-mute}"
   local mic_trig="${2:-audio-micmute}"
-  "$SUDO" -n bash -c "
-    [[ -w /sys/class/leds/platform::mute/trigger ]] && echo '${mute_trig}' > /sys/class/leds/platform::mute/trigger
-    [[ -w /sys/class/leds/platform::micmute/trigger ]] && echo '${mic_trig}' > /sys/class/leds/platform::micmute/trigger
-    for i in 0 7 10 12; do
-      echo \"\$i on\" > /proc/acpi/ibm/led 2>/dev/null || true
-    done
-  " 2>/dev/null || true
+  "$SUDO" -n "${HOME}/.local/bin/bedtime-led-ctl" restore "$mute_trig" "$mic_trig" >/dev/null 2>&1 || true
 }
 
 restore_keyboard() {

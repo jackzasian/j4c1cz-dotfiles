@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Root-only half of bedtime-mode's LED control, split out 2026-08-16 so it has
+# a stable path sudoers can grant NOPASSWD on (see
+# ~/dotfiles/quattro-prep/etc-sudoers.d/20-jackz-bedtime-leds). Not meant to
+# be run directly except by bedtime-mode via `sudo -n bedtime-led-ctl ...`.
+set -euo pipefail
+
+cmd="${1:-}"
+
+case "$cmd" in
+  dark)
+    for led in platform::mute platform::micmute; do
+      [[ -w /sys/class/leds/$led/trigger ]] && echo none > "/sys/class/leds/$led/trigger"
+      [[ -w /sys/class/leds/$led/brightness ]] && echo 0 > "/sys/class/leds/$led/brightness"
+    done
+    for i in 0 7 10 12; do
+      echo "$i off" > /proc/acpi/ibm/led 2>/dev/null || true
+    done
+    for led in tpacpi::power tpacpi::standby tpacpi::lid_logo_dot tpacpi::thinkvantage tpacpi::thinklight; do
+      [[ -w /sys/class/leds/$led/brightness ]] && echo 0 > "/sys/class/leds/$led/brightness"
+    done
+    ;;
+  restore)
+    mute_trig="${2:-audio-mute}"
+    mic_trig="${3:-audio-micmute}"
+    [[ -w /sys/class/leds/platform::mute/trigger ]] && echo "${mute_trig}" > /sys/class/leds/platform::mute/trigger
+    [[ -w /sys/class/leds/platform::micmute/trigger ]] && echo "${mic_trig}" > /sys/class/leds/platform::micmute/trigger
+    for i in 0 7 10 12; do
+      echo "$i on" > /proc/acpi/ibm/led 2>/dev/null || true
+    done
+    ;;
+  *)
+    echo "Usage: bedtime-led-ctl dark|restore [mute_trig] [mic_trig]" >&2
+    exit 2
+    ;;
+esac

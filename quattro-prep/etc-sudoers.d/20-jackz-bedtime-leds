@@ -1,0 +1,11 @@
+# Lets the bedtime-mode hotkey (Super+Shift+Caps+S) toggle ThinkPad indicator
+# LEDs (power/standby/lid-logo/thinkvantage/thinklight/mute/micmute) without a
+# password prompt. Scoped to exactly one script, nothing else — matches the
+# existing NOPASSWD: /home/jackz/bin/localsend-ufw precedent already in this
+# sudoers config. bedtime-mode calls `sudo -n` (never prompts) since a
+# keybind toggle can't reasonably pop a fingerprint dialog every press; this
+# rule is what makes `-n` actually succeed instead of silently no-op'ing.
+#
+# The LED-writing logic itself lives in bedtime-led-ctl, not inline here, so
+# this rule's target never has to change even if that logic does.
+jackz ALL=(root) NOPASSWD: /home/jackz/.local/bin/bedtime-led-ctl
