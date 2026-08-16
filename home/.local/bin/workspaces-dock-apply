@@ -15,9 +15,17 @@ has_monitor() {
 studio_up() { has_monitor 'StudioDisplay'; }
 laptop_up() { has_monitor 'ATNA40HQ10'; }
 
+# jackz fix 2026-08-16: `hyprctl dispatch moveworkspacetomonitor <ws> <mon>`
+# is broken under Quattro's Lua-config Hyprland — mis-parsed as raw Lua, was
+# a silent no-op the whole time (see [[quattro-hyprctl-keyword-broken]];
+# this dispatcher was already flagged there as "no workaround found" as of
+# the original bar-rebuild session — there is one now). hl.dsp.workspace.move
+# takes a table, `monitor` accepts the same "desc:..." selector strings the
+# old CLI form did. Verified safely: a no-op move (workspace already on its
+# target monitor) returned "ok" with zero visible change before this landed.
 move_ws() {
   local ws=$1 mon=$2
-  hyprctl dispatch moveworkspacetomonitor "$ws" "$mon" >/dev/null 2>&1 || true
+  hyprctl eval "hl.dispatch(hl.dsp.workspace.move({monitor = \"${mon}\", workspace = ${ws}}))" >/dev/null 2>&1 || true
 }
 
 if studio_up && laptop_up; then
@@ -34,7 +42,7 @@ if studio_up && laptop_up; then
 
   # Ensure panel is lit
   brightnessctl --device=intel_backlight set 100% >/dev/null 2>&1 || true
-  hyprctl dispatch dpms on eDP-1 >/dev/null 2>&1 || true
+  hyprctl eval 'hl.dispatch(hl.dsp.dpms("on", "eDP-1"))' >/dev/null 2>&1 || true
   echo "workspaces-dock: 5–7 → laptop, 1–4/8–10 → Studio"
 elif laptop_up; then
   # Undocked: all workspaces can live on eDP (rules fall back naturally)

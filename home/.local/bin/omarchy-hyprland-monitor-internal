@@ -53,10 +53,18 @@ enable() {
   rm -f "$TOGGLE_FLAG"
   # Full panel power — dock scripts may have left backlight near 0
   brightnessctl --device="$PANEL_DEV" set 100% >/dev/null 2>&1 || panel_on
-  hyprctl dispatch dpms on eDP-1 >/dev/null 2>&1 || true
+  # jackz fix 2026-08-16: `hyprctl dispatch <name> <args>` is broken under
+  # Quattro's Lua-config Hyprland (mis-parsed as raw Lua — see
+  # [[quattro-hyprctl-keyword-broken]]), so all three lines below used to
+  # silently no-op. dpms and movecursor have confirmed-working `hyprctl eval`
+  # equivalents, verified safely before landing here. focusmonitor does not
+  # — no dsp.monitor namespace and HL.Monitor exposes no focus()/setter,
+  # confirmed by reading /usr/share/hypr/stubs/hl.meta.lua directly rather
+  # than more guessing — left as a known gap, not a fix I could verify.
+  hyprctl eval 'hl.dispatch(hl.dsp.dpms("on", "eDP-1"))' >/dev/null 2>&1 || true
   # Place cursor on laptop (right of Studio in desktop profile) and focus it
-  hyprctl dispatch focusmonitor eDP-1 >/dev/null 2>&1 || true
-  hyprctl dispatch movecursor 3280 450 >/dev/null 2>&1 || true
+  hyprctl dispatch focusmonitor eDP-1 >/dev/null 2>&1 || true  # still broken, no known fix
+  hyprctl eval 'hl.dispatch(hl.dsp.cursor.move({x = 3280, y = 450}))' >/dev/null 2>&1 || true
   notify-send -u critical "Laptop display ON" "Look at the ThinkPad lid screen (to the right of Studio in the layout). Super+Ctrl+Delete toggles."
 }
 
