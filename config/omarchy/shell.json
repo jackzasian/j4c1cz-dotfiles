@@ -18,7 +18,7 @@
         },
         {
           "exec": "~/.config/omarchy/bar/scripts/spotify-status.sh",
-          "fontSize": 13,
+          "fontSize": 22,
           "id": "spotify",
           "interval": 2,
           "onClick": "playerctl -p spotify play-pause",
@@ -32,7 +32,7 @@
         },
         {
           "exec": "~/.config/omarchy/bar/scripts/tasknotes-upcoming.py",
-          "fontSize": 13,
+          "fontSize": 22,
           "id": "tasknotes",
           "interval": 20,
           "onClick": "omarchy-shell -q shell reloadConfig; uwsm-app -- obsidian",
@@ -70,7 +70,7 @@
         },
         {
           "exec": "~/.config/omarchy/bar/scripts/agents-status.sh",
-          "fontSize": 13,
+          "fontSize": 22,
           "id": "hermes-gateway",
           "interval": 10,
           "tooltip": true,
@@ -78,7 +78,7 @@
         },
         {
           "exec": "~/.config/omarchy/bar/scripts/ai-tool-status.sh cc",
-          "fontSize": 13,
+          "fontSize": 22,
           "id": "ai-claude-code",
           "interval": 2,
           "tooltip": true,
@@ -86,7 +86,7 @@
         },
         {
           "exec": "~/.config/omarchy/bar/scripts/ai-tool-status.sh cu",
-          "fontSize": 13,
+          "fontSize": 22,
           "id": "ai-cursor",
           "interval": 2,
           "tooltip": true,
@@ -94,7 +94,7 @@
         },
         {
           "exec": "~/.config/omarchy/bar/scripts/ai-tool-status.sh oc",
-          "fontSize": 13,
+          "fontSize": 22,
           "id": "ai-opencode",
           "interval": 2,
           "tooltip": true,
@@ -102,7 +102,7 @@
         },
         {
           "exec": "~/.config/omarchy/bar/scripts/ai-tool-status.sh cd",
-          "fontSize": 13,
+          "fontSize": 22,
           "id": "ai-claude-desktop",
           "interval": 2,
           "onClick": "omarchy-launch-or-focus com.anthropic.Claude \"uwsm-app -- /home/jackz/.local/bin/claude-launch\"",
@@ -112,7 +112,7 @@
         },
         {
           "exec": "~/.config/omarchy/bar/scripts/voxtype-status-wrapper.sh",
-          "fontSize": 13,
+          "fontSize": 22,
           "id": "voxtype",
           "interval": 5,
           "onClick": "omarchy-voxtype-model",
@@ -126,7 +126,7 @@
         },
         {
           "exec": "~/.config/omarchy/bar/scripts/syncthing-status.sh",
-          "fontSize": 13,
+          "fontSize": 22,
           "id": "syncthing",
           "interval": 15,
           "onClick": "xdg-open http://127.0.0.1:8384",
@@ -135,7 +135,7 @@
         },
         {
           "exec": "~/.config/omarchy/bar/scripts/kdeconnect-status.sh",
-          "fontSize": 13,
+          "fontSize": 22,
           "id": "kdeconnect",
           "interval": 5,
           "onClick": "uwsm-app -- kdeconnect-app",
@@ -151,7 +151,7 @@
         },
         {
           "exec": "~/.config/omarchy/bar/scripts/clash-geo-status.sh",
-          "fontSize": 13,
+          "fontSize": 22,
           "id": "clash-geo",
           "interval": 60,
           "onClick": "uwsm-app -- clash-verge",

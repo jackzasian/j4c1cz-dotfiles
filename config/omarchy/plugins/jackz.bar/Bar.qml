@@ -1072,21 +1072,6 @@ Item {
       }
     }
 
-    // jackz customization 2026-08-16: a thin accent hairline along the bar's
-    // outer edge. The bar used to end in a hard flat line straight into the
-    // desktop/wallpaper below with zero separation. Horizontal positions
-    // only (top/bottom) — this machine only ever runs position: "top", and
-    // a left/right bar would need different math this wasn't worth risking
-    // blind.
-    Rectangle {
-      visible: !root.vertical && !root.transparent
-      x: 0
-      width: parent.width
-      height: 2
-      y: root.position === "top" ? parent.height - height : 0
-      color: Util.alpha(Color.accent, 0.55)
-    }
-
     PopupWindow {
       id: tooltipWindow
 
@@ -1537,11 +1522,7 @@ Item {
       id: horizontalModuleList
 
       Row {
-        // jackz customization 2026-08-16: was 0 — every widget sat flush
-        // against its neighbor with nothing but each widget's own internal
-        // margin to tell them apart. A real gap plus the ModuleSlot chip
-        // background below is what turns "icon soup" into distinct modules.
-        spacing: Style.space(6)
+        spacing: 0
 
         Repeater {
           model: moduleListRoot.entries
@@ -1559,7 +1540,7 @@ Item {
       id: verticalModuleList
 
       Column {
-        spacing: Style.space(6)
+        spacing: 0
 
         Repeater {
           model: moduleListRoot.entries
@@ -1625,32 +1606,6 @@ Item {
     }
 
     HoverHandler { id: moduleHover }
-
-    // jackz customization 2026-08-16: WidgetButton (what every command/qml/
-    // registry widget ultimately paints through) draws no background of its
-    // own — every module used to sit directly on the bar's flat fill, with
-    // nothing to separate one icon from the next but each widget's own
-    // internal margin. This gives every module its own soft "chip", plus a
-    // hover tint for free. z is implicit (declaration order): this sits
-    // before the content Loaders below, so it paints behind them.
-    //
-    // Round 2 (2026-08-16, same day): the first pass used a 5.5% white wash
-    // over the bar fill — Jack's call was "still looks bad", and at that
-    // alpha it's nearly invisible against #2e3440, which is exactly the
-    // kind of change that reads as "nothing happened." Color.muted is
-    // theme's own distinctly-lighter secondary surface tone (Nord: #4c566a
-    // vs the bar's #2e3440 — a real hue+lightness step, not just an alpha
-    // wash), matching how the SketchyBar/waybar references actually do it:
-    // a genuinely different fill color per module, not a subtle tint.
-    Rectangle {
-      id: slotChip
-      anchors.fill: parent
-      visible: slot.width > 0 && slot.height > 0 && !slot.dragSource
-      radius: height / 2
-      color: slot.hovered ? Util.alpha(Color.accent, 0.38) : Util.alpha(Color.muted, 0.6)
-
-      Behavior on color { ColorAnimation { duration: 140; easing.type: Easing.OutCubic } }
-    }
 
     BorderSurface {
       visible: slot.dragSource
