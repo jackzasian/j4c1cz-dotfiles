@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
 # Launch WeChat or focus an existing window.
-# WeChat is single-instance: if the process is alive but Hyprland has no client,
-# a plain second launch is a no-op — restart in that case.
+#
+# WeChat is single-instance. SUPER+W parks its window on the hidden
+# `special:wechat` workspace (see omarchy-close-window) rather than closing it,
+# so the login session survives. This script:
+#   1. If a window exists on a normal workspace -> focus it.
+#   2. If a window exists on special:wechat    -> move it to the current
+#      workspace and focus it (instant restore, no relaunch, no login).
+#   3. If the process is alive but has no window at all -> do NOT kill it
+#      (killing forces a fresh login). Try a plain second launch to nudge it
+#      back; if that fails, tell the user to use the WeChat tray icon.
 #
 # Chinese IME: WeChat is XWayland/Electron. Global GTK/QT_IM_MODULE are unset for
 # native Wayland apps (fcitx5 diagnose); WeChat needs them + X11 ozone.
@@ -10,22 +18,43 @@ set -euo pipefail
 WINDOW_PATTERN='wechat'
 LAUNCH='uwsm-app -- env GTK_IM_MODULE=fcitx QT_IM_MODULE=fcitx XMODIFIERS=@im=fcitx INPUT_METHOD=fcitx SDL_IM_MODULE=fcitx ELECTRON_OZONE_PLATFORM_HINT=x11 OZONE_PLATFORM=x11 GDK_BACKEND=x11 wechat'
 
-has_wechat_window() {
-  hyprctl clients -j | jq -e --arg p "$WINDOW_PATTERN" '
+wechat_window() {
+  hyprctl clients -j | jq -r --arg p "$WINDOW_PATTERN" '
     .[] | select((.class | test("\\b" + $p + "\\b"; "i")) or (.title | test("\\b" + $p + "\\b"; "i")))
-  ' >/dev/null 2>&1
+    | [.address, .workspace.name] | @tsv
+  ' 2>/dev/null | head -n1
 }
 
-if has_wechat_window; then
+read -r WIN_ADDR WIN_WS < <(wechat_window || true) || WIN_ADDR=
+WIN_ADDR=${WIN_ADDR:-}
+
+if [[ -n "$WIN_ADDR" ]]; then
+  if [[ "$WIN_WS" == special:* ]]; then
+    CUR_WS=$(hyprctl activeworkspace -j | jq -r '.name' 2>/dev/null)
+    hyprctl dispatch "hl.dsp.focus({ window = \"address:$WIN_ADDR\" })" >/dev/null 2>&1
+    sleep 0.3
+    hyprctl eval "hl.dispatch(hl.dsp.window.move({ workspace = \"$CUR_WS\", follow = true }))" >/dev/null 2>&1
+    sleep 0.3
+  fi
   exec omarchy-launch-or-focus "$WINDOW_PATTERN" "$LAUNCH"
 fi
 
 if pgrep -x wechat >/dev/null; then
-  killall wechat 2>/dev/null || true
-  for _ in $(seq 1 20); do
-    pgrep -x wechat >/dev/null || break
-    sleep 0.2
+  # Process alive but truly no window (e.g. WeChat's own close button hid it to
+  # the system tray, bypassing our SUPER+W parking). Do NOT killall — killing
+  # forces a fresh login. Try a plain second launch (single-instance may nudge
+  # the existing process to re-show), and if that fails, tell the user to use
+  # the tray icon instead of nuking the session.
+  env GTK_IM_MODULE=fcitx QT_IM_MODULE=fcitx XMODIFIERS=@im=fcitx INPUT_METHOD=fcitx SDL_IM_MODULE=fcitx ELECTRON_OZONE_PLATFORM_HINT=x11 OZONE_PLATFORM=x11 GDK_BACKEND=x11 wechat >/dev/null 2>&1 &
+  for _ in $(seq 1 15); do
+    sleep 0.5
+    if wechat_window >/dev/null; then
+      exec omarchy-launch-or-focus "$WINDOW_PATTERN" "$LAUNCH"
+    fi
   done
+  omarchy-notification-send -g wechat "WeChat is running in the tray" \
+    "Use the WeChat tray icon to bring it back (no login needed)." >/dev/null 2>&1
+  exit 0
 fi
 
 exec omarchy-launch-or-focus "$WINDOW_PATTERN" "$LAUNCH"

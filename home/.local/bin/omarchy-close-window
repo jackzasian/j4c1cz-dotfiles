@@ -1,25 +1,29 @@
 #!/usr/bin/env bash
-# Close the active window. Tray apps like WeChat quit on killactive — use closewindow instead.
+# Close the active window. WeChat gets parked on the hidden special:wechat
+# workspace instead of being closed, so its window and login session survive
+# (wechat-launch restores it instantly — no kill, no fresh login).
 #
 # jackz fix 2026-08-16: `hyprctl dispatch <name> [args]` from the CLI is
 # broken under Quattro's Lua-config Hyprland — it gets mis-translated into
 # raw Lua and fails to parse or resolve. Confirmed live (safely, against a
 # disposable test window, not any real one): bare `killactive` failed with
 # "expected a dispatcher" (exit 7), `closewindow class:X` failed to even
-# parse ("')' expected near 'class'") — meaning this script has been
-# silently doing nothing for any non-WeChat window since the migration
-# (SUPER+W's only visible effect was Quattro's own redundant packaged
-# hard-close handler, which fires in parallel and can't be unbound — see
-# bindings.lua's note on that). Fixed via `hyprctl eval` +
-# hl.dsp.window.close(), which takes an optional selector string exactly
-# like the old closewindow dispatcher did.
+# parse ("')' expected near 'class'") — meaning this script was silently
+# doing nothing for any non-WeChat window since the migration. Fixed via
+# `hyprctl eval` + hl.dsp.window.close(), which takes an optional selector
+# string exactly like the old closewindow dispatcher did.
 set -euo pipefail
 
 class=$(hyprctl activewindow -j | jq -r '.class // empty')
 
 case "$class" in
   wechat|Weixin)
-    hyprctl eval 'hl.dispatch(hl.dsp.window.close("class:wechat"))'
+    # Park WeChat on the hidden special:wechat workspace instead of closing it.
+    # Closing destroys the X window; on the next SUPER+SHIFT+W, wechat-launch
+    # would then have to kill+relaunch to recover, which forces a fresh login.
+    # Parking keeps both the window and the login session alive, and
+    # wechat-launch restores it instantly.
+    hyprctl eval 'hl.dispatch(hl.dsp.window.move({ workspace = "special:wechat", follow = false }))'
     ;;
   *)
     hyprctl eval 'hl.dispatch(hl.dsp.window.close())'
