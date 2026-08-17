@@ -1,21 +1,21 @@
 NEXT                             LEFT LAST                              PASSED UNIT                                 ACTIVATES
-Mon 2026-08-17 13:07:26 CST        9s Mon 2026-08-17 13:05:26 CST 1min 50s ago power-profile-policy.timer           power-profile-policy.service
-Mon 2026-08-17 13:07:44 CST       27s Mon 2026-08-17 13:04:44 CST 2min 32s ago omarchy-services-battery.timer       omarchy-services-battery.service
-Mon 2026-08-17 13:08:11 CST       54s Mon 2026-08-17 13:07:11 CST       5s ago sonos-stream-watchdog.timer          sonos-stream-watchdog.service
-Mon 2026-08-17 13:12:16 CST  4min 59s Mon 2026-08-17 13:02:16 CST     5min ago clash-secure-localhost.timer         clash-secure-localhost.service
-Mon 2026-08-17 13:23:39 CST     16min Mon 2026-08-17 12:42:13 CST    25min ago proxyfix.timer                       proxyfix.service
-Mon 2026-08-17 19:00:00 CST  5h 52min Mon 2026-08-17 07:00:00 CST 4h 55min ago aw510m-lights-schedule.timer         aw510m-lights-schedule.service
-Mon 2026-08-17 19:00:00 CST  5h 52min Mon 2026-08-17 07:00:00 CST 4h 55min ago kbd-backlight-schedule.timer         kbd-backlight-schedule.service
-Tue 2026-08-18 03:30:00 CST       14h Mon 2026-08-17 06:05:30 CST 5h 50min ago hyprsunset-flux-schedule.timer       hyprsunset-flux-schedule.service
-Tue 2026-08-18 06:00:00 CST       16h Mon 2026-08-17 06:05:30 CST 5h 50min ago j4c1cz-sync.timer                    j4c1cz-sync.service
-Tue 2026-08-18 06:30:00 CST       17h Mon 2026-08-17 06:30:00 CST 5h 25min ago dashboard-resync.timer               dashboard-resync.service
-Tue 2026-08-18 07:00:00 CST       17h Mon 2026-08-17 07:00:00 CST 4h 55min ago veloplanner-trainingpeaks-sync.timer veloplanner-trainingpeaks-sync.service
-Tue 2026-08-18 08:30:00 CST       19h Mon 2026-08-17 08:30:00 CST 3h 25min ago security-scan@daily.timer            security-scan@daily.service
+Mon 2026-08-17 13:11:12 CST       18s Mon 2026-08-17 13:10:12 CST      41s ago sonos-stream-watchdog.timer          sonos-stream-watchdog.service
+Mon 2026-08-17 13:11:27 CST       33s Mon 2026-08-17 13:09:27 CST 1min 26s ago power-profile-policy.timer           power-profile-policy.service
+Mon 2026-08-17 13:12:16 CST  1min 22s Mon 2026-08-17 13:02:16 CST     8min ago clash-secure-localhost.timer         clash-secure-localhost.service
+Mon 2026-08-17 13:13:45 CST  2min 51s Mon 2026-08-17 13:10:45 CST       8s ago omarchy-services-battery.timer       omarchy-services-battery.service
+Mon 2026-08-17 13:23:39 CST     12min Mon 2026-08-17 12:42:13 CST    28min ago proxyfix.timer                       proxyfix.service
+Mon 2026-08-17 19:00:00 CST  5h 49min Mon 2026-08-17 07:00:00 CST 4h 59min ago aw510m-lights-schedule.timer         aw510m-lights-schedule.service
+Mon 2026-08-17 19:00:00 CST  5h 49min Mon 2026-08-17 07:00:00 CST 4h 59min ago kbd-backlight-schedule.timer         kbd-backlight-schedule.service
+Tue 2026-08-18 03:30:00 CST       14h Mon 2026-08-17 06:05:30 CST 5h 53min ago hyprsunset-flux-schedule.timer       hyprsunset-flux-schedule.service
+Tue 2026-08-18 06:00:00 CST       16h Mon 2026-08-17 06:05:30 CST 5h 53min ago j4c1cz-sync.timer                    j4c1cz-sync.service
+Tue 2026-08-18 06:30:00 CST       17h Mon 2026-08-17 06:30:00 CST 5h 29min ago dashboard-resync.timer               dashboard-resync.service
+Tue 2026-08-18 07:00:00 CST       17h Mon 2026-08-17 07:00:00 CST 4h 59min ago veloplanner-trainingpeaks-sync.timer veloplanner-trainingpeaks-sync.service
+Tue 2026-08-18 08:30:00 CST       19h Mon 2026-08-17 08:30:00 CST 3h 29min ago security-scan@daily.timer            security-scan@daily.service
 Wed 2026-08-19 09:00:00 CST 1 day 19h Sun 2026-08-16 09:00:00 CST      17h ago omarchy-job@folder-sort.timer        omarchy-job@folder-sort.service
 Sun 2026-08-23 11:05:43 CST    5 days Sun 2026-08-16 11:07:35 CST      15h ago backup-thinkpad-to-mac.timer         backup-thinkpad-to-mac.service
 Sun 2026-08-23 20:00:00 CST    6 days Sun 2026-08-16 20:00:00 CST       6h ago omarchy-job@zen-links.timer          omarchy-job@zen-links.service
-Mon 2026-08-24 09:30:00 CST    6 days Mon 2026-08-17 09:30:00 CST 2h 25min ago security-scan@weekly.timer           security-scan@weekly.service
-Mon 2026-08-24 10:30:00 CST    6 days Mon 2026-08-17 10:30:00 CST 1h 25min ago security-scan@deep.timer             security-scan@deep.service
+Mon 2026-08-24 09:30:00 CST    6 days Mon 2026-08-17 09:30:00 CST 2h 29min ago security-scan@weekly.timer           security-scan@weekly.service
+Mon 2026-08-24 10:30:00 CST    6 days Mon 2026-08-17 10:30:00 CST 1h 29min ago security-scan@deep.timer             security-scan@deep.service
 -                                   - Sat 2026-08-15 11:40:59 CST            - tasknotes-calendar-ics.timer         tasknotes-calendar-ics.service
 
 18 timers listed.

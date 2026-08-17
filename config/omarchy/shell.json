@@ -36,18 +36,7 @@
           "id": "omarchy.workspaces"
         },
         {
-          "id": "quickshell.spotify",
-          "deviceName": "Omarchy Spotify",
-          "idleShutdownMinutes": 15,
-          "showMiniPlayer": "On",
-          "shortcutPlayer": "Omarchy default",
-          "showTrackTitle": "On",
-          "showArtistName": "Off",
-          "scrollBarText": "Off",
-          "scrollSpeed": "1",
-          "audioQuality": "320 kbps",
-          "searchHistory": "[]",
-          "sessionState": "{\"tab\":\"home\",\"searchText\":\"\",\"searchType\":\"track\",\"libraryType\":\"tracks\",\"homeType\":\"recent\",\"libraryFilter\":\"\",\"librarySort\":\"default\",\"playlistFilter\":\"\",\"playlistSort\":\"default\",\"detailFilter\":\"\",\"detailSort\":\"default\",\"homeFilter\":\"\",\"discoverFilter\":\"\",\"queueFilter\":\"\",\"artistSearchText\":\"\",\"scrollPositions\":{\"home:recent\":0},\"detailItem\":null,\"selectedPlaylistId\":\"\",\"lastRadioPlaylist\":null}"
+          "id": "omarchy.media"
         }
       ],
       "right": [
