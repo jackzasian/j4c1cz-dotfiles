@@ -15,6 +15,14 @@ Panel {
   property int dataVersion: 0
   property bool loading: false
 
+  // jackz addition 2026-08-17: no Docker on the Mac Mini, so this is a
+  // separate reachability/disk/services check bolted onto the same widget
+  // (Jack's choice over a standalone widget). Polled independently and much
+  // less often than the local docker poll -- it's an SSH round trip, not a
+  // local socket call.
+  property var macminiData: ({})
+  property bool macminiLoaded: false
+
   property string viewMode: "list"
   property string selectedContainer: ""
   property string logText: ""
@@ -51,6 +59,19 @@ Panel {
       loading = true
       monitorProc.running = true
     }
+  }
+
+  function refreshMacmini() {
+    if (!macminiProc.running) macminiProc.running = true
+  }
+
+  function handleMacminiOutput(raw) {
+    try {
+      macminiData = JSON.parse(String(raw || "{}"))
+    } catch (e) {
+      macminiData = { reachable: false }
+    }
+    macminiLoaded = true
   }
 
   function handleOutput(raw) {
@@ -164,6 +185,7 @@ Panel {
     if (opened) {
       pollTimer.running = true
       refresh()
+      refreshMacmini()
     } else {
       viewMode = "list"
       selectedContainer = ""
@@ -171,7 +193,7 @@ Panel {
     }
   }
 
-  Component.onCompleted: refresh()
+  Component.onCompleted: { refresh(); refreshMacmini() }
 
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
@@ -206,12 +228,32 @@ Panel {
 
   Process { id: notifyProc }
 
+  Process {
+    id: macminiProc
+    command: ["python3", pathFromUrl(Qt.resolvedUrl("scripts/macmini_status.py"))]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.handleMacminiOutput(text)
+    }
+  }
+
   Timer {
     id: pollTimer
     interval: root.pollInterval * 1000
     running: true
     repeat: true
     onTriggered: root.refresh()
+  }
+
+  // Deliberately much slower than pollTimer -- this is an SSH round trip
+  // over the network, not a local docker socket call, and nothing about
+  // Mac Mini disk/service state needs 10-second freshness.
+  Timer {
+    id: macminiPollTimer
+    interval: 60000
+    running: true
+    repeat: true
+    onTriggered: root.refreshMacmini()
   }
 
   Timer {
@@ -584,6 +626,94 @@ Panel {
                 }
               }
             }
+          }
+        }
+
+        // ── Mac Mini status (jackz addition 2026-08-17) ──
+        PanelSeparator {
+          visible: root.viewMode === "list"
+          Layout.fillWidth: true
+          foreground: root.fg
+        }
+
+        ColumnLayout {
+          visible: root.viewMode === "list"
+          Layout.fillWidth: true
+          spacing: Style.space(3)
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: Style.space(6)
+
+            Text {
+              text: "󰇄"
+              color: !root.macminiLoaded ? root.dim : (root.macminiData.reachable ? "#22c55e" : "#ef4444")
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.body
+              Layout.alignment: Qt.AlignVCenter
+            }
+
+            Text {
+              text: "Mac Mini"
+              color: root.fg
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.body
+              font.bold: true
+              Layout.fillWidth: true
+              Layout.alignment: Qt.AlignVCenter
+            }
+
+            Text {
+              text: !root.macminiLoaded ? "checking…" : (root.macminiData.reachable ? "online" : "offline")
+              color: !root.macminiLoaded ? root.dim : (root.macminiData.reachable ? "#22c55e" : "#ef4444")
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              Layout.alignment: Qt.AlignVCenter
+            }
+          }
+
+          Repeater {
+            model: (root.macminiLoaded && root.macminiData.reachable && root.macminiData.disks) ? root.macminiData.disks : []
+
+            delegate: RowLayout {
+              required property var modelData
+              Layout.fillWidth: true
+              Layout.leftMargin: Style.space(14)
+              spacing: Style.space(6)
+
+              Text {
+                text: modelData.volume
+                color: root.dim
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                Layout.fillWidth: true
+              }
+
+              Text {
+                text: modelData.avail + " free of " + modelData.size + " (" + modelData.capacityPct + "% used)"
+                color: Number(modelData.capacityPct) >= 90 ? "#ef4444" : (Number(modelData.capacityPct) >= 75 ? "#eab308" : root.dim)
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+              }
+            }
+          }
+
+          Text {
+            visible: root.macminiLoaded && root.macminiData.reachable && root.macminiData.services !== undefined
+            Layout.fillWidth: true
+            Layout.leftMargin: Style.space(14)
+            text: {
+              var s = root.macminiData.services
+              if (!s) return ""
+              var parts = []
+              parts.push("Syncthing " + (s.syncthing ? "up" : "down"))
+              parts.push("vault-backup " + (s.vaultBackup ? "registered" : "missing"))
+              return parts.join(" · ")
+            }
+            color: root.dim
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            elide: Text.ElideRight
           }
         }
 
