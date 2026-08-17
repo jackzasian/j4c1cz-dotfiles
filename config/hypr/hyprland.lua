@@ -11,6 +11,13 @@ dofile((os.getenv("OMARCHY_PATH") or "/usr/share/omarchy") .. "/default/hypr/boo
 -- inside this one require:
 --   default/hypr/autostart.conf, bindings/{media,clipboard,tiling-v2,utilities}.conf,
 --   envs.conf, looknfeel.conf, input.conf, windows.conf
+-- Kill the preinstalled-app bindings block (applications.lua's
+-- `if o.preinstalled_bindings_enabled() then ...`) BEFORE defaults load:
+-- it double-registers 21 combos we re-declare ourselves (e.g. SUPER+SHIFT+W
+-- = Omawrite vs our WeChat, SUPER+ALT+RETURN = Tmux vs our Zellij, and
+-- SUPER+SHIFT+SLASH launching both 1Password AND Bitwarden). Every app we
+-- actually use is re-declared in hypr.bindings below.
+omarchy_preinstalled_bindings = false
 require("default.hypr.omarchy")
 
 -- Personal overrides, loaded after Omarchy's defaults so package updates can

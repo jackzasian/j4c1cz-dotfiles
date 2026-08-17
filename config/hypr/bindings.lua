@@ -4,9 +4,10 @@
 --   bindd = SUPER SHIFT, X, Desc, exec, cmd   ->  o.bind("SUPER + SHIFT + X", "Desc", cmd)
 --   bindl / bindld                            ->  o.bind(..., { locked = true })
 --   unbind = MOD, KEY   +   rebind            ->  just re-declare o.bind(); user
---       files load after default.hypr.omarchy, so the later bind wins.
---       VERIFY: if a re-declared key double-fires instead of overriding, grab the
---       returned keybind object from the default and call :unbind() on it.
+--       files load after default.hypr.omarchy, so the later bind wins. To
+--       REMOVE a packaged default first, call hl.unbind("SUPER + W") BEFORE
+--       the new o.bind() — Omarchy's sanctioned override, see the omarchy
+--       skill docs and /usr/share/omarchy/default/hypr/bindings.lua.
 --
 -- Helper table forms (see default/hypr/helpers.lua):
 --   { launch = "cmd" }            -> uwsm-app -- cmd
@@ -26,9 +27,10 @@ local home = os.getenv("HOME")
 -- Quattro's own packaged default (`omarchy-launch-terminal`, which calls
 -- xdg-terminal-exec) ALSO registered on the same combo the whole time —
 -- confirmed via `hyprctl binds -j` showing 2 live registrations, and
--- jackz actually seeing two terminal windows open on one press. Can't
--- unbind a packaged default (same limit as the SUPER+W saga above), so
--- instead: made kitty the system default terminal
+-- jackz actually seeing two terminal windows open on one press. (Note: the
+-- packaged default COULD have been removed with hl.unbind("SUPER + RETURN"),
+-- as with SUPER+W below — this was settled before that was known. Chosen
+-- alternative:) made kitty the system default terminal
 -- (~/.config/xdg-terminals.list) and removed kitty.conf's global Zellij
 -- shell override (nothing else needed it — see kitty.conf's own comment).
 -- Quattro's single default binding now does exactly what we want: one
@@ -36,6 +38,10 @@ local home = os.getenv("HOME")
 -- $() needs a shell; exec dispatchers run through /bin/sh, so this is fine.
 o.bind("SUPER + ALT + RETURN", "Terminal (Zellij, cwd)",
   [[uwsm-app -- kitty --session none -d "$(omarchy-cmd-terminal-cwd)" -e zellij]])
+-- Re-declared from Quattro's preinstalled-bindings block, which
+-- omarchy_preinstalled_bindings = false now disables (see hyprland.lua).
+o.bind("SUPER + CTRL + RETURN", "Herdr", { omarchy = "terminal-herdr" })
+o.bind("SUPER + SHIFT + M", "Music", { omarchy = "spotify" })
 o.bind("SUPER + SHIFT + RETURN", "Browser", "omarchy-launch-browser")
 o.bind("SUPER + SHIFT + F", "File manager", { launch = "nautilus --new-window" })
 o.bind("SUPER + ALT + SHIFT + F", "File manager (cwd)",
@@ -64,9 +70,9 @@ o.bind("SUPER + SHIFT + CTRL + COMMA", "Note destination…", home .. "/.local/b
 o.bind("SUPER + SHIFT + T", "Tasks (Obsidian)", { focus = "^obsidian$", launch = "obsidian" })
 
 -- Quattro's default binds Omawrite to SUPER+SHIFT+W, which we need for
--- WeChat instead (see Window management overrides below). Can't unbind the
--- packaged default, so both technically still fire on that key — this gives
--- Omawrite a clean second key if you want to actually use it.
+-- WeChat instead — but `omarchy_preinstalled_bindings = false` (see
+-- hyprland.lua) now removes the packaged Omawrite binding entirely, so
+-- SUPER+SHIFT+W is cleanly WeChat-only. This gives Omawrite a dedicated key:
 o.bind("SUPER + SHIFT + CTRL + W", "Omawrite", { launch = "omawrite" })
 
 -- CONFLICT carried over from bindings.conf: SUPER+SHIFT+ALT+L was bound twice —
@@ -82,6 +88,10 @@ o.bind("SUPER + SHIFT + A", "ChatGPT", { webapp = "https://chatgpt.com" })
 o.bind("SUPER + SHIFT + ALT + A", "Grok", { webapp = "https://grok.com" })
 o.bind("SUPER + SHIFT + C", "Calendar", { webapp = "https://app.hey.com/calendar/weeks/" })
 o.bind("SUPER + SHIFT + E", "Email", { webapp = "https://app.hey.com" })
+-- Re-declared from the disabled preinstalled-bindings block (see hyprland.lua).
+o.bind("SUPER + SHIFT + ALT + E", "New email",
+  { webapp = "https://app.hey.com/messages/new?display=standalone&new_window=true" })
+o.bind("SUPER + SHIFT + S", "Google Maps", { webapp = "https://maps.google.com/", focus = true })
 o.bind("SUPER + SHIFT + Y", "YouTube", { webapp = "https://youtube.com/" })
 o.bind("SUPER + SHIFT + X", "X", { webapp = "https://x.com/" })
 o.bind("SUPER + SHIFT + ALT + X", "X Post", { webapp = "https://x.com/compose/post" })
@@ -101,16 +111,15 @@ o.bind("SUPER + SHIFT + H", "Hermes Discord webapp",
 -- SUPER+Q is clean: nothing else claims it, so this is the only handler.
 o.bind("SUPER + Q", "Quit app (hard close)", hl.dsp.window.close())
 --
--- SUPER+W is NOT clean, and can't be made clean: Quattro's packaged default
+-- SUPER+W needs an explicit unbind: Quattro's packaged default
 -- (`o.bind("SUPER + W", "Close window", hl.dsp.window.close())` in
--- default/hypr/bindings/tiling.lua) re-declaring the same combo doesn't
--- unbind it — Hyprland's Lua bind API only lets you :unbind() a keybind
--- object you captured at declare time, and that one lives in a read-only
--- packaged file. Confirmed via `hyprctl binds -j`: both are live
--- simultaneously. So pressing SUPER+W fires BOTH the hard close above AND
--- the tray-safe close below — in practice this may still hard-quit WeChat
--- despite the intent. If that turns out to actually happen, the only real
--- fix is picking a different key for the tray-safe close instead.
+-- default/hypr/bindings/tiling.lua) registers first, so without this the
+-- hard close above would fire alongside the tray-safe close below and
+-- hard-quit WeChat despite the intent. `hl.unbind("SUPER + W")` is Omarchy's
+-- sanctioned override (see /usr/share/omarchy/default/hypr/bindings.lua and
+-- the omarchy skill docs) and must come BEFORE the re-bind. Confirmed live:
+-- with the unbind, only the tray-safe close remains.
+hl.unbind("SUPER + W")
 o.bind("SUPER + W", "Close window (tray-safe)", "omarchy-close-window")
 
 -- Laptop LCD while docked — see _meta/Hermes/studio-dock-lights.md
@@ -121,8 +130,20 @@ o.bind("SUPER + CTRL + DELETE", "Toggle laptop display",
 -- Physical Caps sends Ctrl because of kb_options = ctrl:swapcaps (input.lua).
 -- NOTE: satty and wf-recorder/wl-screenrec are retired by Quattro. Verify the
 -- omarchy-capture-* commands still exist and behave the same before trusting these.
+-- Quattro's packaged defaults claim SUPER+CTRL+1..9 for bar panels
+-- (default/hypr/bindings/utilities.lua, spelled as `code:10`..`code:18`).
+-- Captures win, so unbind all nine before re-declaring the capture keys.
+hl.unbind("SUPER + CTRL + code:10")
+hl.unbind("SUPER + CTRL + code:11")
+hl.unbind("SUPER + CTRL + code:12")
+hl.unbind("SUPER + CTRL + code:13")
+hl.unbind("SUPER + CTRL + code:14")
+hl.unbind("SUPER + CTRL + code:15")
+hl.unbind("SUPER + CTRL + code:16")
+hl.unbind("SUPER + CTRL + code:17")
+hl.unbind("SUPER + CTRL + code:18")
 o.bind("SUPER + CTRL + 1", "Capture area", "omarchy-capture-screenshot region")
-o.bind("SUPER + CTRL + 2", "Capture OCR", "omarchy-capture-text-extraction")
+o.bind("SUPER + CTRL + 2", "Capture OCR", "omarchy-capture-text")
 o.bind("SUPER + CTRL + 3", "Capture fullscreen", "omarchy-capture-screenshot fullscreen")
 o.bind("SUPER + CTRL + 4", "Capture window", "omarchy-capture-screenshot windows")
 
@@ -138,7 +159,6 @@ o.bind("SUPER + ALT + O", "Switch audio output", "omarchy-audio-output-switch")
 -- config is parsed, so naming overview:toggle as a dispatcher directly would fail
 -- at startup and drop Hyprland into safe mode.
 o.bind("SUPER + GRAVE", "Workspace overview", "hyprctl dispatch overview:toggle")
-o.bind("SUPER + code:41", "Workspace overview", "hyprctl dispatch overview:toggle")
 o.bind("SUPER + SHIFT + GRAVE", "Workspace overview (all monitors)", "hyprctl dispatch overview:toggle all")
 o.bind("SUPER + SHIFT + V", "Workspace overview", "hyprctl dispatch overview:toggle")
 
