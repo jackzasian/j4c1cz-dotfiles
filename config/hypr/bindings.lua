@@ -62,11 +62,8 @@ o.bind("SUPER + SHIFT + ALT + C", "Claude",
   { focus = "Claude", launch = home .. "/.local/bin/claude-launch" })
 
 -- ── Obsidian / notes capture ─────────────────────────────────────────────────
-o.bind("SUPER + SHIFT + CTRL + L", "Save link to Obsidian", home .. "/.local/bin/obsidian-save-link")
-o.bind("SUPER + SHIFT + CTRL + N", "Quick note → Inbox", home .. "/.local/bin/obsidian-save-note")
-o.bind("SUPER + SHIFT + ALT + N", "Multiline note → Inbox", home .. "/.local/bin/obsidian-save-note --edit")
-o.bind("SUPER + SHIFT + CTRL + M", "Post note → j4c1cz.com", home .. "/.local/bin/obsidian-post-note")
-o.bind("SUPER + SHIFT + CTRL + COMMA", "Note destination…", home .. "/.local/bin/obsidian-note-dest")
+-- Capture keybindings are managed by the omarchy-obsidian-capture plugin
+-- (see require("obsidian-capture") at the bottom of this file).
 o.bind("SUPER + SHIFT + T", "Tasks (Obsidian)", { focus = "^obsidian$", launch = "obsidian" })
 
 -- Quattro's default binds Omawrite to SUPER+SHIFT+W, which we need for
@@ -76,11 +73,10 @@ o.bind("SUPER + SHIFT + T", "Tasks (Obsidian)", { focus = "^obsidian$", launch =
 o.bind("SUPER + SHIFT + CTRL + W", "Omawrite", { launch = "omawrite" })
 
 -- CONFLICT carried over from bindings.conf: SUPER+SHIFT+ALT+L was bound twice —
--- once to obsidian-open-links-recent (line 17) and again to `j4c1cz clip`
--- (line 98). In hyprlang the last one won, so only "Publish link" was reachable.
--- Preserving that behaviour; the shadowed binding is kept here commented so you
--- can give it its own key if you actually wanted it.
--- o.bind("SUPER + SHIFT + ALT + L", "Open recent links", home .. "/.local/bin/obsidian-open-links-recent")
+-- once to the links-recent feed and again to `j4c1cz clip` (line 98). In hyprlang
+-- the last one won, so only "Publish link" was reachable. The recent feed is now
+-- available via the Obsidian Super+Space menu (`obsidian-capture recent`), so the
+-- shadowed binding is intentionally left unbound.
 o.bind("SUPER + SHIFT + ALT + L", "Publish link to j4c1cz", home .. "/.local/bin/j4c1cz clip")
 
 -- ── Web apps ─────────────────────────────────────────────────────────────────
@@ -173,3 +169,6 @@ o.bind("SUPER + SHIFT + V", "Workspace overview", "hyprctl dispatch overview:tog
 -- Bedtime: blank all screens + lights, lid stays open (toggle).
 o.bind("SUPER + SHIFT + CTRL + S", "Bedtime mode",
   home .. "/.local/bin/bedtime-mode toggle", { locked = true })
+
+-- Added by omarchy-obsidian-capture
+require("obsidian-capture")

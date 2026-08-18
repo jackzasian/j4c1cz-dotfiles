@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "jackzasian.obsidian-capture",
+  "name": "Obsidian Capture",
+  "version": "1.0.0",
+  "author": "jackzasian",
+  "license": "MIT",
+  "description": "Save links and quick notes into an Obsidian vault from any app: keybindings, omarchy-menu entries, a recent-links feed, and optional Zen bookmark sync / vault push.",
+  "kinds": [
+    "service"
+  ],
+  "entryPoints": {
+    "service": "Service.qml"
+  }
+}

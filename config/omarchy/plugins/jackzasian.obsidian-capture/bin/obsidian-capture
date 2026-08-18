@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+"""obsidian-capture entry point.
+
+Resolves its own symlink so the obsidian_capture package is found next to the
+real script even when invoked through a symlink in ~/.local/bin.
+"""
+
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+
+from obsidian_capture.cli import main
+
+if __name__ == "__main__":
+    os.environ.setdefault("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+    raise SystemExit(main())

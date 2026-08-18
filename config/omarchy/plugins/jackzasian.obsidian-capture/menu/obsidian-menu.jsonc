@@ -1,0 +1,33 @@
+{
+  "obsidian": {"icon":"󰓇","label":"Obsidian","aliases":["vault","links","notes"]},
+  "obsidian.save-link": {
+    "icon":"󰔷","label":"Save Link to Obsidian",
+    "description":"Save the clipboard URL into the vault Links/",
+    "action":"$HOME/.local/bin/obsidian-capture link"
+  },
+  "obsidian.quick-note": {
+    "icon":"󰎞","label":"Quick Note to Inbox",
+    "description":"Capture a short note into Obsidian Inbox",
+    "action":"$HOME/.local/bin/obsidian-capture note"
+  },
+  "obsidian.multiline-note": {
+    "icon":"󰎞","label":"Multiline Note to Inbox",
+    "description":"Edit a longer note, then save into Obsidian Inbox",
+    "action":"$HOME/.local/bin/obsidian-capture edit"
+  },
+  "obsidian.web-note": {
+    "icon":"󱜪","label":"Post Note to j4c1cz.com",
+    "description":"Publish a short note to the public notes page",
+    "action":"$HOME/.local/bin/obsidian-capture web"
+  },
+  "obsidian.dest-note": {
+    "icon":"󰎞","label":"Note, then Choose Destination",
+    "description":"Capture a note and pick inbox / site / both",
+    "action":"$HOME/.local/bin/obsidian-capture dest"
+  },
+  "obsidian.recent": {
+    "icon":"󰋖","label":"Open Recent Links",
+    "description":"Open the newest-first links feed in Obsidian",
+    "action":"$HOME/.local/bin/obsidian-capture recent"
+  }
+}

@@ -1,30 +1,50 @@
+// Managed by omarchy-obsidian-capture.
+// Plugin entries are merged from the plugin's menu/obsidian-menu.jsonc;
+// user entries above are preserved.
 {
-  // Extend the Quickshell Omarchy menu with JSONC.
-  //
-  // IDs are object keys. The parent is inferred from the dotted id, so
-  // "personal.notes" appears under "personal", and "personal" appears on the
-  // root menu. Reuse an existing id to override/extend it.
-  //
-  // Fields:
-  //   icon        Nerd Font glyph shown in the icon column.
-  //   label       Visible row title.
-  //   action      Shell command to run. If omitted, the row is a submenu.
-  //   target      Existing submenu id to open. Use for links/aliases.
-  //   provider    Runtime provider function/command returning JSON rows.
-  //   aliases     alternate `omarchy menu summon <name>` routes; also searchable.
-  //   description Optional subtitle and extra search text.
-  //   when        Shell condition; hide row when it fails.
-  //   checked     Shell condition; append ✓ when it succeeds.
-  //
-  // Examples:
-  // "personal": {"icon":"","label":"Personal"},
-  // "personal.notes": {"icon":"󰎞","label":"Notes","action":"omarchy-launch-editor ~/notes"},
-  // "personal.files": {"icon":"","label":"Files","action":"uwsm-app -- nautilus ~/Documents"},
-  //
-  // Only use provider when a provider_name function or command named "name"
-  // returns JSON rows. Static submenus only need dotted ids.
-  //
-  // Example: replace the default About action by reusing the same id. Existing
-  // fields are kept unless overridden.
-  // "about": {"icon":"","label":"About","action":"omarchy-launch-or-focus-tui \"zsh -c 'fastfetch; read -k 1'\""},
+  "obsidian": {
+    "icon": "󰓇",
+    "label": "Obsidian",
+    "aliases": [
+      "vault",
+      "links",
+      "notes"
+    ]
+  },
+  "obsidian.save-link": {
+    "icon": "󰔷",
+    "label": "Save Link to Obsidian",
+    "description": "Save the clipboard URL into the vault Links/",
+    "action": "$HOME/.local/bin/obsidian-capture link"
+  },
+  "obsidian.quick-note": {
+    "icon": "󰎞",
+    "label": "Quick Note to Inbox",
+    "description": "Capture a short note into Obsidian Inbox",
+    "action": "$HOME/.local/bin/obsidian-capture note"
+  },
+  "obsidian.multiline-note": {
+    "icon": "󰎞",
+    "label": "Multiline Note to Inbox",
+    "description": "Edit a longer note, then save into Obsidian Inbox",
+    "action": "$HOME/.local/bin/obsidian-capture edit"
+  },
+  "obsidian.web-note": {
+    "icon": "󱜪",
+    "label": "Post Note to j4c1cz.com",
+    "description": "Publish a short note to the public notes page",
+    "action": "$HOME/.local/bin/obsidian-capture web"
+  },
+  "obsidian.dest-note": {
+    "icon": "󰎞",
+    "label": "Note, then Choose Destination",
+    "description": "Capture a note and pick inbox / site / both",
+    "action": "$HOME/.local/bin/obsidian-capture dest"
+  },
+  "obsidian.recent": {
+    "icon": "󰋖",
+    "label": "Open Recent Links",
+    "description": "Open the newest-first links feed in Obsidian",
+    "action": "$HOME/.local/bin/obsidian-capture recent"
+  }
 }

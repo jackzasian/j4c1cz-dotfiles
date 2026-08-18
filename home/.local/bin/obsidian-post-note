@@ -1,3 +1,1 @@
-#!/usr/bin/env bash
-# Post a short note to j4c1cz.com/notes (Walker prompt).
-exec /home/jackz/.local/bin/obsidian-save-note --web "$@"
+/home/jackz/.config/omarchy/plugins/jackzasian.obsidian-capture/bin/wrappers/obsidian-post-note

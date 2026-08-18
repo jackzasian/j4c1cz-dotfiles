@@ -1,2 +1,1 @@
-#!/usr/bin/env bash
-exec /home/jackz/.local/bin/obsidian-save-note --dest "$@"
+/home/jackz/.config/omarchy/plugins/jackzasian.obsidian-capture/bin/wrappers/obsidian-note-dest

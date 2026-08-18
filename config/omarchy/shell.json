@@ -81,6 +81,9 @@
   "plugins": [
     {
       "id": "omarchy.agents"
+    },
+    {
+      "id": "jackzasian.obsidian-capture"
     }
   ],
   "version": 1

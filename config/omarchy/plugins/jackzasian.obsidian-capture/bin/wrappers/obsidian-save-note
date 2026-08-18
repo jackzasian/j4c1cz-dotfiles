@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Legacy compat alias -> obsidian-capture note
+exec obsidian-capture note "$@"

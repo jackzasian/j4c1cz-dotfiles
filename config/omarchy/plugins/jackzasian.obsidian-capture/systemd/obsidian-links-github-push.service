@@ -1,0 +1,11 @@
+[Unit]
+Description=Push Obsidian Links/ to the vault git remote
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/obsidian-capture push
+Nice=10
+
+[Install]
+WantedBy=timers.target

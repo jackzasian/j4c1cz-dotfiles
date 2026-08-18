@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Legacy compat alias -> obsidian-capture dest
+exec obsidian-capture dest "$@"
