@@ -1,4 +1,47 @@
 #!/bin/bash
 export MISE_MINIMUM_RELEASE_AGE=0
+# Silences mise's informational banner on stdout when this wrapper is invoked
+# non-interactively (no MISE_SHELL / prior activation to resolve codex to the
+# real binary first) -- e.g. quickshell's omarchy-agent-usage-codex collector,
+# which parses newline-delimited JSON from codex app-server's stdout. Harmless
+# hygiene fix (same pattern already used for `gh` in the omarchy
+# robzolkos.github plugin) but NOT the actual fix for the missing-subscription
+# bug below -- see that note first if you're here investigating this again.
+export MISE_QUIET=1
+
+# The real fix: quickshell's process environment (and anything it spawns,
+# including this wrapper) has no HTTP_PROXY/HTTPS_PROXY/ALL_PROXY -- those are
+# only ever exported by `proxy_on` (~/.config/omarchy/proxy.sh) inside an
+# interactive shell, which the graphical session never sources. Without a
+# route to the network, codex's app-server hangs internally trying to reach
+# OpenAI (logged as "codex_models_manager::manager: failed to refresh
+# available models: timeout waiting for child process to exit"), which stalls
+# the account/rateLimits/read RPC well past the omarchy-agent-usage-codex
+# collector's 4s timeout -- confirmed 3/3 reproducible runs against
+# quickshell's actual environment (PID at the time of the fix), and confirmed
+# fixed by injecting these same vars (RPC then answers in ~1.1s with real
+# rate-limit data). Mirrors `proxy_on`'s own detection so this is a no-op
+# when Clash isn't running, and never overrides vars already set by the
+# caller (an interactive shell with proxy_on/proxy_off already run).
+if [ -z "${HTTP_PROXY:-}" ] && [ -z "${https_proxy:-}" ]; then
+  __clash_sock=/tmp/verge/verge-mihomo.sock
+  if [ -S "$__clash_sock" ] && curl -sS --max-time 2 --unix-socket "$__clash_sock" http://localhost/ 2>/dev/null | grep -q '"hello":"mihomo"'; then
+    __clash_cfg="$HOME/.local/share/io.github.clash-verge-rev.clash-verge-rev/config.yaml"
+    __clash_port=7897
+    if [ -f "$__clash_cfg" ]; then
+      __port_from_cfg=$(awk '/^mixed-port:/ {print $2; exit}' "$__clash_cfg")
+      [ -n "$__port_from_cfg" ] && __clash_port=$__port_from_cfg
+    fi
+    __clash_url="http://127.0.0.1:${__clash_port}"
+    export http_proxy=$__clash_url https_proxy=$__clash_url
+    export HTTP_PROXY=$__clash_url HTTPS_PROXY=$__clash_url
+    export ALL_PROXY="socks5://127.0.0.1:${__clash_port}"
+    export all_proxy=$ALL_PROXY
+    export NO_PROXY='localhost,127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10,.ts.net,jacks-mac-mini,thinkpad1,local'
+    export no_proxy=$NO_PROXY
+  fi
+  unset __clash_sock __clash_cfg __clash_port __port_from_cfg __clash_url
+fi
+
 mise use -g "codex" || exit 1
 exec mise x "codex" -- "codex" "$@"

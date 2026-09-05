@@ -44,22 +44,28 @@
           "id": "omarchy.tray"
         },
         {
+          "id": "bt.codecs"
+        },
+        {
+          "id": "jackzasian.eq"
+        },
+        {
           "id": "jackzasian.clash-verge"
         },
         {
-          "id": "robzolkos.github"
+          "id": "robzolkos.github",
+          "actionScanBehavior": "Off",
+          "refreshIntervalSec": 300
         },
         {
           "id": "omarchy.tailscale"
         },
         {
-          "id": "omarchy.agents"
-        },
-        {
           "id": "omarchy.bluetooth"
         },
         {
-          "id": "bt.codecs"
+          "id": "jackz.agents",
+          "refreshIntervalSec": 60
         },
         {
           "id": "omarchy.network"
