@@ -1,0 +1,31 @@
+--- a/Panel.qml
++++ b/Panel.qml
+@@ -16,6 +16,9 @@
+ // the Codex rate-limit fix this shipped alongside).
+ Panel {
+   id: root
++  readonly property bool menuOnly: setting("menuOnly", false) === true
++  readonly property real openPanelIndicatorWidth: root.menuOnly ? 0.4 : 0
++  readonly property real openPanelIndicatorHeight: root.menuOnly ? 0.4 : 0
+   ipcTarget: "omarchy.agents"
+   manageIpc: false
+ 
+@@ -346,8 +349,8 @@
+   // item is invisible, so the icon appears the moment the first scan finds
+   // usage and stays away entirely on a machine that has never run either CLI.
+   visible: providers.length > 0
+-  implicitWidth: button.implicitWidth
+-  implicitHeight: button.implicitHeight
++  implicitWidth: root.menuOnly ? 0 : (button.implicitWidth)
++  implicitHeight: root.menuOnly ? 0 : (button.implicitHeight)
+ 
+   onOpenedChanged: if (opened) {
+     nowMs = Date.now()
+@@ -386,6 +389,7 @@
+ 
+   BarIconButton {
+     id: button
++    visible: !root.menuOnly
+     anchors.fill: parent
+     bar: root.bar
+     text: "󱚣"

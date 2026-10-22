@@ -35,21 +35,32 @@
           "refreshIntervalSec": 60
         },
         {
-          "id": "omarchy.weather"
+          "id": "jackz.weather",
+          "menuOnly": true
         },
         {
-          "id": "mykcib.obsidian-quickedit"
+          "id": "mykcib.obsidian-quickedit",
+          "menuOnly": true
         },
         {
           "id": "omarchy.system-update"
         },
         {
-          "id": "djjeane.docker-monitor"
+          "id": "djjeane.docker-monitor",
+          "menuOnly": true
         }
       ],
       "left": [
         {
-          "id": "evindor.keystroke"
+          "id": "desktop-tools",
+          "type": "command",
+          "text": "󰒓",
+          "tooltip": "Desktop Tools · Super+Ctrl+M",
+          "onClick": "/home/jackz/.local/bin/oma-cast run omarchy:desktop-tools"
+        },
+        {
+          "id": "evindor.keystroke",
+          "menuOnly": true
         },
         {
           "id": "omarchy.workspaces"
@@ -60,16 +71,19 @@
           "historySamples": 60,
           "temperatureUnit": "Celsius",
           "openExpanded": true,
-          "processPowerEnabled": false
+          "processPowerEnabled": false,
+          "menuOnly": true
         },
         {
           "id": "agx.screen-time",
           "iconOnly": true,
           "dailyGoalLog": [],
-          "hideEasterEggs": true
+          "hideEasterEggs": true,
+          "menuOnly": true
         },
         {
-          "id": "omarchy.media"
+          "id": "jackz.media",
+          "menuOnly": true
         }
       ],
       "right": [
@@ -88,7 +102,8 @@
         },
         {
           "id": "io.github.ilyazar.syncthing",
-          "refreshIntervalSec": 60
+          "refreshIntervalSec": 60,
+          "menuOnly": true
         },
         {
           "id": "omaconnect",
@@ -97,50 +112,60 @@
           "showTroubleshooting": false,
           "showRemoteCommands": false,
           "showMediaPlayer": false,
-          "showActionSms": false
+          "showActionSms": false,
+          "menuOnly": true
         },
         {
           "id": "io.github.mnsosa.backup-history",
           "service": "backup-thinkpad-to-mac.service",
           "scope": "user",
           "weeks": 4,
-          "refreshIntervalSec": 300
+          "refreshIntervalSec": 300,
+          "menuOnly": true
         },
         {
           "id": "omaplug",
           "autoCheckUpdates": false,
           "autoCheckIntervalHours": 24,
-          "bulkUpdateScope": "verified"
+          "bulkUpdateScope": "verified",
+          "menuOnly": true
         },
         {
           "id": "crmne.hyprmoncfg",
-          "showBarIcon": true
+          "showBarIcon": false
         },
         {
-          "id": "bt.codecs"
+          "id": "bt.codecs",
+          "menuOnly": true
         },
         {
-          "id": "jackzasian.eq"
+          "id": "jackzasian.eq",
+          "menuOnly": true
         },
         {
           "id": "jackzasian.relaypilot",
-          "refreshIntervalSec": 10
+          "refreshIntervalSec": 10,
+          "menuOnly": true
         },
         {
           "actionScanBehavior": "Off",
           "id": "robzolkos.github",
           "refreshIntervalSec": 300,
-          "linkBehavior": "Browser tab"
+          "linkBehavior": "Browser tab",
+          "menuOnly": true
         },
         {
-          "id": "omarchy.tailscale"
+          "id": "jackz.tailscale",
+          "menuOnly": true
         },
         {
-          "id": "omarchy.bluetooth"
+          "id": "jackz.bluetooth",
+          "menuOnly": true
         },
         {
           "id": "jackz.agents",
-          "refreshIntervalSec": 300
+          "refreshIntervalSec": 300,
+          "menuOnly": true
         },
         {
           "id": "omarchy.network"
@@ -149,7 +174,8 @@
           "id": "omarchy.audio"
         },
         {
-          "id": "omarchy.monitor"
+          "id": "jackz.monitor",
+          "menuOnly": true
         },
         {
           "id": "omarchy.power"
@@ -160,11 +186,13 @@
     "transparent": false
   },
   "cloneSourceRestores": [
-    "evindor.keystroke"
+    "evindor.keystroke",
+    "jackz.media"
   ],
   "disabledPlugins": [
-    "omarchy.menu",
-    "omarchy.clock"
+    "omarchy.clock",
+    "omarchy.media",
+    "omarchy.menu"
   ],
   "plugins": [
     {

@@ -1,0 +1,29 @@
+--- a/Panel.qml
++++ b/Panel.qml
+@@ -11,6 +11,7 @@
+ 
+ Panel {
+   id: root
++  readonly property bool menuOnly: setting("menuOnly", false) === true
+   moduleName: "omarchy.bluetooth"
+   ipcTarget: "omarchy.bluetooth"
+   // manageIpc: false so this panel can own the single IpcHandler the target
+@@ -499,8 +500,8 @@
+   }
+ 
+   visible: adapter !== null
+-  implicitWidth: button.implicitWidth
+-  implicitHeight: button.implicitHeight
++  implicitWidth: root.menuOnly ? 0 : (button.implicitWidth)
++  implicitHeight: root.menuOnly ? 0 : (button.implicitHeight)
+ 
+   // BlueZ rejects StartDiscovery while the adapter is still powering up, and
+   // discovery can also time out on its own. While the panel is open, keep
+@@ -651,6 +652,7 @@
+ 
+   BarIconButton {
+     id: button
++    visible: !root.menuOnly
+     anchors.fill: parent
+     bar: root.bar
+     text: root.icon

@@ -1,0 +1,265 @@
+{
+  "schemaVersion": 1,
+  "omarchy_settings": "4.0.6-1",
+  "patch_order": "Apply after the earlier plugin-maintenance patches; native clones are created with omarchy plugin clone first.",
+  "patches": [
+    {
+      "id": "jackz.weather",
+      "cloned_from": "omarchy.weather",
+      "version": "1.0.0",
+      "patch": "patches/jackz.weather.patch",
+      "sha256": "5b743a88b7d7cb6efd09c712d655e5fd852049286eddcb167194a8ae511a7585",
+      "files": {
+        "BarWidget.qml": {
+          "before_sha256": "ab3e32b97cf37847ff880a44013133eef9b9f04fe7258b692b30e7b24c6de4ca",
+          "after_sha256": "eb7854564264e3925f252204e674381b6d55b65953531904dab3f5be5543365f"
+        }
+      }
+    },
+    {
+      "id": "jackz.bluetooth",
+      "cloned_from": "omarchy.bluetooth",
+      "version": "1.0.0",
+      "patch": "patches/jackz.bluetooth.patch",
+      "sha256": "6288818782fed44e9000ec0197be5f87e00ecb7b917f2e7bd99c4251863d5f72",
+      "files": {
+        "Panel.qml": {
+          "before_sha256": "018af5e96d27fe1f09dca2b2f24904c06290e31d21d00974387e0d51de8ae4b2",
+          "after_sha256": "3f5f415684fb1e6e41d71f8ca6345ec444b395b79ae028929c59d505012748df"
+        }
+      }
+    },
+    {
+      "id": "jackz.monitor",
+      "cloned_from": "omarchy.monitor",
+      "version": "1.0.0",
+      "patch": "patches/jackz.monitor.patch",
+      "sha256": "ba79b968f94897d847172f0b5411b6b0f36d9be57bb3d712cd0e0b789dc42c50",
+      "files": {
+        "Panel.qml": {
+          "before_sha256": "7ce864b8360625b008d5539adb555b3366513cdfd8fe57a93c64acef23d94bfa",
+          "after_sha256": "cabe47a1e4c2bf510ca82cc16b37a5580096f65d7ef003f11a9a894bee49850a"
+        }
+      }
+    },
+    {
+      "id": "jackz.tailscale",
+      "cloned_from": "omarchy.tailscale",
+      "version": "1.0.0",
+      "patch": "patches/jackz.tailscale.patch",
+      "sha256": "ce90b203629af9d1a3d9238ae1031987c12815a87f3b1dd90001be5c7b982c21",
+      "files": {
+        "Panel.qml": {
+          "before_sha256": "027c0777eecdcd4e9d4fb3614b14bc1fc54345eedd0d01a3a96b9eb5848d56b6",
+          "after_sha256": "8886e02629867851cca94fe3d1f29842bb677b71f53a3280bfd0a39ab7a069a5"
+        }
+      }
+    },
+    {
+      "id": "jackz.media",
+      "cloned_from": "omarchy.media",
+      "version": "1.0.0",
+      "patch": "patches/jackz.media.patch",
+      "sha256": "879580dab0ee4084895aaa67ba28f080c3b6e7fc0622fb0dad0902570992b502",
+      "files": {
+        "BarWidget.qml": {
+          "before_sha256": "ce61de66e6204a049ce6f35af8cbb8d8ef2f5211fd1bc690b2018cf45d75837e",
+          "after_sha256": "1dd1fdaa380e27b17cabd3e2baad83593aaeb60b012447a26139b4be8a64af06"
+        }
+      }
+    },
+    {
+      "id": "evindor.keystroke",
+      "version": "1.5.1",
+      "patch": "patches/evindor.keystroke.patch",
+      "sha256": "2111009de9fae556fb14146273960f4e74f51bb964bfc00c36e846e9fb474518",
+      "files": {
+        "BarWidget.qml": {
+          "before_sha256": "4ecdd809406badb0cfcc2e85915f01dd8ed116b0ba51228123cc6c648d939cf4",
+          "after_sha256": "64b26fa517dd339588dc2619f9266b23a78e10d96c93f99ebbc9e14e5f0269c1"
+        }
+      },
+      "source_commit": "b7a10ca7fb4e4644244b50d29b7b4d16f9db46ff"
+    },
+    {
+      "id": "stappmus.activity-monitor",
+      "version": "2.1.1",
+      "patch": "patches/stappmus.activity-monitor.patch",
+      "sha256": "b7425d42388060914423025916dd36db31d3b0b1467bb354c7133571f0d87999",
+      "files": {
+        "Panel.qml": {
+          "before_sha256": "1af31d0e6be3ee2e0ba7fa2a8535648edb9d4a23e0f0834c63a2a6b2edaa1671",
+          "after_sha256": "b91b3f440832c5a3382fe5a84755f8513634c95e9f184a65eba395db0d7d5ece"
+        }
+      },
+      "source_commit": "b25a98c7ff2a688ab74d86d2be42249e2db2f9cf"
+    },
+    {
+      "id": "agx.screen-time",
+      "version": "1.6.2",
+      "patch": "patches/agx.screen-time.patch",
+      "sha256": "0fc8129a3d485079b99d7d5071d3a3150024fc6e7e648a12bd5df04aaf343a86",
+      "files": {
+        "qml/BarWidget.qml": {
+          "before_sha256": "79dd9eef32c91284bab181ee19e5ad746288e5766ed3e6829240e0f089cd91e3",
+          "after_sha256": "a11abafa0e4064618b30c9a9062bafbee4e8af69b10014a9ae47d187fc4cf26d"
+        }
+      },
+      "source_commit": "2c7b75abde55b23ee6d6e1356797c8f50f60b8a1"
+    },
+    {
+      "id": "io.github.ilyazar.syncthing",
+      "version": "0.2.3",
+      "patch": "patches/io.github.ilyazar.syncthing.patch",
+      "sha256": "d4f13109c482168b73037492523530ae17ae0761a3378f205f0de756c694e0f0",
+      "files": {
+        "hosts/omarchy/OmarchyPanel.qml": {
+          "before_sha256": "cc38fb17820d4fe430d6df55da2df227d7f988016772795ec6c57bbcff9ab616",
+          "after_sha256": "189aec4e63b841d8ef468ee6a98b7f4f98f89f8711b34fc16b6086032d1f7c52"
+        }
+      },
+      "source_commit": "45b25c88015c4b482b401b100c4fc5e39f9b96b6"
+    },
+    {
+      "id": "omaconnect",
+      "version": "1.5.0",
+      "patch": "patches/omaconnect.patch",
+      "sha256": "49332db91da65752236b373f11d39617f163413386bbb8c62e32539723a2bee5",
+      "files": {
+        "BarWidget.qml": {
+          "before_sha256": "07290380ee3e231ffd55e14b835f4e4a2e14c69be0a5b3844c8bc6960ba6849e",
+          "after_sha256": "d304ccd4b915dacfdb0478de3b1f81e63f4bcf2a9b350794caabe79bf25b858a"
+        }
+      },
+      "source_commit": "1e78baa215e79b3408c6976c8348000ed16341eb"
+    },
+    {
+      "id": "io.github.mnsosa.backup-history",
+      "version": "0.3.0",
+      "patch": "patches/io.github.mnsosa.backup-history.patch",
+      "sha256": "f0816855554e8b38fd38c6f107c4391354deda9642c26afa89212f0981e06b05",
+      "files": {
+        "BarWidget.qml": {
+          "before_sha256": "ccdf0143903f224a990c6dfbbc8afd529fd86fd5e0042735bcee362818d164cf",
+          "after_sha256": "2f0aed52be2981ea915f83c32bf99d3f88c2f25baf4fff6ee5466d422df61071"
+        }
+      },
+      "source_commit": "23e8eaa139b4feb4cb8ac6edbea29f7c9f7178f3"
+    },
+    {
+      "id": "omaplug",
+      "version": "1.6.6",
+      "patch": "patches/omaplug.patch",
+      "sha256": "55cf84d266a50e6be4c77ace8b6bb7947710f68e4e9dabe2015f223d7c8377ff",
+      "files": {
+        "BarWidget.qml": {
+          "before_sha256": "b4f8ab1cacaf81b7cda0c026fda63d4188a1a465e60b85ba8a495bf68a4659d0",
+          "after_sha256": "d5045d24b09dbec64e2c074329f854e7568127f3730013b72cc5a9655c41bf4c"
+        }
+      },
+      "source_commit": "64df56e876846247ded550890c52b7b190776b3e"
+    },
+    {
+      "id": "bt.codecs",
+      "version": "1.1.0",
+      "patch": "patches/bt.codecs.patch",
+      "sha256": "61ffd7daccf85fcacc4a11ea3f0ada39486f6a40c44432d983cc28fde1ea29ca",
+      "files": {
+        "Panel.qml": {
+          "before_sha256": "a432de468b0edfc839169591d2a1b8b3814ff16b5a5b5d384f0d19b37b365ead",
+          "after_sha256": "71dbf16e901a4a23fb1aed4db52a349e598b2766f4c552c77bcaeffaf3c445bd"
+        }
+      },
+      "source_commit": "ae2fd481831d932fdf74be21e4723800f6ba0e0c"
+    },
+    {
+      "id": "jackzasian.eq",
+      "version": "3.1.0",
+      "patch": "patches/jackzasian.eq.patch",
+      "sha256": "2969a30532ee16cc6d9893e7e00d36c6d9308aa520961546bd4f33aceb1e7423",
+      "files": {
+        "plugin/Panel.qml": {
+          "before_sha256": "fe3853b24f141ffaf4785759dddd0fc8fc22afbe4643ac4f900b8349b27ac9e1",
+          "after_sha256": "2b9b9d8500f04f89c543adfede3fb73ee607fb636d82d19f1cb95bf9a10ed690"
+        }
+      },
+      "source_commit": "897692e73f1caa08fda549b182c1046481825640"
+    },
+    {
+      "id": "jackzasian.relaypilot",
+      "version": "1.0.0",
+      "patch": "patches/jackzasian.relaypilot.patch",
+      "sha256": "993db886f9f3f757e30e24c7b7e6d9fda1b1b5777add7ac3acf2c4746ca66539",
+      "files": {
+        "Main.qml": {
+          "before_sha256": "0201a95a7f6557f12df6141996b32a7c449ffcab928c7b399d3078e8614f5254",
+          "after_sha256": "c8487b3617924e5228a0f7a65f797f1b2d30d6148f70a21cd8a86d7b9e28aac2"
+        }
+      }
+    },
+    {
+      "id": "robzolkos.github",
+      "version": "0.3.0",
+      "patch": "patches/robzolkos.github.patch",
+      "sha256": "ce70ca5a2e0dc1a26f94bece1886f5e7ec343bc19e4979ca1335d436ab558e23",
+      "files": {
+        "Panel.qml": {
+          "before_sha256": "cf45423d486df2ec49734c654d8833bda5b4a632c1a36a66dca7103161eeb432",
+          "after_sha256": "552ec1a17edebaf44581cc67264755a122fee2f5b81412f7827b7e43b037e861"
+        }
+      },
+      "source_commit": "6f361a45ee928119fbb73d26ca2173b9266a9e73"
+    },
+    {
+      "id": "jackz.agents",
+      "version": "1.0.0",
+      "patch": "patches/jackz.agents.patch",
+      "sha256": "55fefd139d421ccc9f80ce908f15d5e31324322359d0b73dcb3d6afbb9224b1c",
+      "files": {
+        "Panel.qml": {
+          "before_sha256": "c57b765da49e3a5a5af4d67ce2c282be302d921dbf28956db3d78b62bd70389a",
+          "after_sha256": "0c7aa70a7273af0352b47ba6b1561d13f4e0030fb4e27ddc76e4eaee8124dae9"
+        }
+      }
+    },
+    {
+      "id": "mykcib.obsidian-quickedit",
+      "version": "1.0.0",
+      "patch": "patches/mykcib.obsidian-quickedit.patch",
+      "sha256": "4810176c861e6dec7808376c7709e3f644b328d3c6c0d8e27a934fdcb9e33113",
+      "files": {
+        "BarWidget.qml": {
+          "before_sha256": "b7b7f5d13deff81bb4ec36a96c0e15ed19b774c8f3e6074a5bbe773449fad501",
+          "after_sha256": "74cf2719812601ce6f83f908f4094bc890d77b011f58835a073b117716d27f6c"
+        }
+      },
+      "source_commit": "61a6b262f0958fd4e29b9575bd01469cae7423e3"
+    },
+    {
+      "id": "djjeane.docker-monitor",
+      "version": "1.0.0",
+      "patch": "patches/djjeane.docker-monitor.patch",
+      "sha256": "d4c74010f49d5291e2ac2520842abe04c91b1274bf54375ae7b2f8971f2fbad8",
+      "files": {
+        "Panel.qml": {
+          "before_sha256": "e875d440a34f08683a9c00ce92e18974960d1a9f793e63bf346dfda22cc0ca92",
+          "after_sha256": "ae8806558694fe578bde737300853940ac580227f881e61295b2e26ee4148a8a"
+        }
+      },
+      "source_commit": "81c95ec532b255d5d2bc98f6ff42c936608e9ead"
+    },
+    {
+      "id": "crmne.omacal",
+      "version": "1.2.1",
+      "patch": "patches/crmne.omacal.patch",
+      "sha256": "868de3f397f90b5b4a10f83f4227707742457defc792f5b93c1d4c150855d90b",
+      "files": {
+        "manifest.json": {
+          "before_sha256": "4aae99c3664b196ab3805a454b3d4df4819452ca4fea171e77ae71987f5c6970",
+          "after_sha256": "cb0fe9ed7c734f9adbdce5eae6c556edf36da35b5ee70e5c7ad0ee9fd17df20d"
+        }
+      },
+      "source_commit": "95ee533b28bb9e273185dfc5b3bcdb92df25d01f"
+    }
+  ]
+}

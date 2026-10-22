@@ -1,0 +1,132 @@
+{
+  "desktop-tools": {
+    "label": "Desktop Tools",
+    "aliases": [
+      "tools",
+      "maintenance",
+      "plugins",
+      "controls"
+    ],
+    "description": "Open desktop panels without permanent bar icons"
+  },
+  "desktop-tools.plugins": {
+    "label": "Plugins",
+    "description": "Browse installed plugins and check updates",
+    "action": "omarchy-shell shell summon omaplug '{}'"
+  },
+  "desktop-tools.backups": {
+    "label": "Backup History",
+    "description": "Review recent backup runs",
+    "action": "omarchy-shell shell summon io.github.mnsosa.backup-history '{}'"
+  },
+  "desktop-tools.monitors": {
+    "label": "Monitor Layouts",
+    "description": "Open monitor layout and display settings",
+    "action": "omarchy-shell shell summon crmne.hyprmoncfg '{}'"
+  },
+  "desktop-tools.activity": {
+    "label": "Activity Monitor",
+    "description": "Check CPU memory and running processes",
+    "action": "omarchy-shell shell summon stappmus.activity-monitor '{}'"
+  },
+  "desktop-tools.screen-time": {
+    "label": "Screen Time",
+    "description": "Review local application usage",
+    "action": "omarchy-shell shell summon agx.screen-time '{}'"
+  },
+  "desktop-tools.sync": {
+    "label": "Syncthing",
+    "description": "Check vault and device sync",
+    "action": "omarchy-shell shell summon io.github.ilyazar.syncthing '{}'"
+  },
+  "desktop-tools.phone": {
+    "label": "Phone",
+    "description": "Open existing KDE Connect phone controls",
+    "action": "omarchy-shell shell summon omaconnect '{}'"
+  },
+  "desktop-tools.bluetooth": {
+    "label": "Bluetooth",
+    "description": "Manage Bluetooth connections",
+    "action": "omarchy-shell shell summon omarchy.bluetooth '{}'"
+  },
+  "desktop-tools.bluetooth-codec": {
+    "label": "Bluetooth Codec",
+    "description": "Choose Bluetooth audio codec and profile",
+    "action": "omarchy-shell shell summon bt.codecs '{}'"
+  },
+  "desktop-tools.speaker-eq": {
+    "label": "Speaker EQ",
+    "description": "Open speaker EQ profiles",
+    "action": "omarchy-shell shell summon jackzasian.eq '{}'"
+  },
+  "desktop-tools.proxy": {
+    "label": "Proxy",
+    "description": "Open RelayPilot status and controls",
+    "action": "/home/jackz/.local/bin/relaypilot-ui"
+  },
+  "desktop-tools.github": {
+    "label": "GitHub",
+    "description": "Open GitHub pull requests and notifications",
+    "action": "omarchy-shell shell summon robzolkos.github '{}'"
+  },
+  "desktop-tools.agents": {
+    "label": "Agent Usage",
+    "description": "Review coding agent usage",
+    "action": "omarchy-shell shell summon jackz.agents '{}'"
+  },
+  "desktop-tools.docker": {
+    "label": "Docker",
+    "description": "Review containers",
+    "action": "omarchy-shell shell summon djjeane.docker-monitor '{}'"
+  },
+  "desktop-tools.weather": {
+    "label": "Weather",
+    "description": "Open weather details",
+    "action": "omarchy-shell shell summon omarchy.weather '{}'"
+  },
+  "desktop-tools.media": {
+    "label": "Media",
+    "description": "Open media playback controls",
+    "action": "omarchy-shell shell summon omarchy.media '{}'"
+  },
+  "desktop-tools.quick-note": {
+    "label": "Quick Note",
+    "description": "Capture a note into Obsidian",
+    "action": "omarchy-shell shell summon mykcib.obsidian-quickedit '{}'"
+  },
+  "desktop-tools.search": {
+    "label": "Search",
+    "description": "Open the secondary search palette",
+    "action": "omarchy-shell shell summon evindor.keystroke '{}'"
+  },
+  "desktop-tools.today-tasks": {
+    "label": "Today Tasks",
+    "description": "View Today tasks from Obsidian",
+    "action": "omarchy-shell shell summon doghouse-mike.omatasknotes '{}'"
+  },
+  "desktop-tools.calendar": {
+    "label": "Calendar",
+    "description": "View calendar dates and events",
+    "action": "omarchy-shell shell summon crmne.omacal"
+  },
+  "desktop-tools.guide": {
+    "label": "Keyboard Bar Guide",
+    "description": "Open this desktop keyboard guide in Obsidian",
+    "action": "xdg-open 'obsidian://open?vault=J4c1c&file=Notes%2FTech%2FOmarchy%20keyboard%20bar%20guide.md'"
+  },
+  "desktop-tools.toggle-bar": {
+    "label": "Show / Hide Bar",
+    "description": "Toggle the whole top bar (Super+Shift+Space)",
+    "action": "omarchy toggle bar"
+  },
+  "desktop-tools.tailscale": {
+    "label": "Tailscale",
+    "description": "Open existing Tailscale network controls",
+    "action": "omarchy-shell shell summon omarchy.tailscale"
+  },
+  "desktop-tools.display-controls": {
+    "label": "Display Controls",
+    "description": "Open brightness and display controls",
+    "action": "omarchy-shell shell summon omarchy.monitor"
+  }
+}

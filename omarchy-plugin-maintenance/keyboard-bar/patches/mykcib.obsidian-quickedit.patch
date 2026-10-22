@@ -1,0 +1,31 @@
+--- a/BarWidget.qml
++++ b/BarWidget.qml
+@@ -9,6 +9,9 @@
+ // UI lives in Panel.qml.
+ BarWidget {
+   id: root
++  readonly property bool menuOnly: setting("menuOnly", false) === true
++  readonly property real openPanelIndicatorWidth: root.menuOnly ? 0.4 : 0
++  readonly property real openPanelIndicatorHeight: root.menuOnly ? 0.4 : 0
+   moduleName: "mykcib.obsidian-quickedit"
+ 
+   // ---- Popup shape contract. Bar.findPanelWidget requires open/close/opened
+@@ -45,8 +48,8 @@
+     if ("hostWidget" in target) target.hostWidget = root
+   }
+ 
+-  implicitWidth: button.implicitWidth
+-  implicitHeight: button.implicitHeight
++  implicitWidth: root.menuOnly ? 0 : (button.implicitWidth)
++  implicitHeight: root.menuOnly ? 0 : (button.implicitHeight)
+ 
+   onBarChanged: injectPanel()
+   onSettingsChanged: injectPanel()
+@@ -64,6 +67,7 @@
+ 
+   BarIconButton {
+     id: button
++    visible: !root.menuOnly
+     anchors.fill: parent
+     bar: root.bar
+     text: "\uf016"

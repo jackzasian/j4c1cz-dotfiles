@@ -1,0 +1,31 @@
+--- a/BarWidget.qml
++++ b/BarWidget.qml
+@@ -16,6 +16,9 @@
+ // hidden on a vertical bar, like Omarchy's own text widgets.
+ BarWidget {
+   id: root
++  readonly property bool menuOnly: setting("menuOnly", false) === true
++  readonly property real openPanelIndicatorWidth: root.menuOnly ? 0.4 : 0
++  readonly property real openPanelIndicatorHeight: root.menuOnly ? 0.4 : 0
+   moduleName: "evindor.keystroke"
+ 
+   readonly property var keystroke: {
+@@ -26,8 +29,8 @@
+   }
+   readonly property var items: root.keystroke && root.keystroke.barList ? root.keystroke.barList : []
+ 
+-  implicitWidth: layout.implicitWidth
+-  implicitHeight: layout.implicitHeight
++  implicitWidth: root.menuOnly ? 0 : (layout.implicitWidth)
++  implicitHeight: root.menuOnly ? 0 : (layout.implicitHeight)
+ 
+   function toggleMenu() {
+     if (root.bar) root.bar.run("omarchy-shell shell toggle omarchy.menu '{\"menu\":\"root\"}'")
+@@ -47,6 +50,7 @@
+   Row {
+     id: layout
+ 
++    visible: !root.menuOnly
+     WidgetButton {
+       id: button
+       bar: root.bar

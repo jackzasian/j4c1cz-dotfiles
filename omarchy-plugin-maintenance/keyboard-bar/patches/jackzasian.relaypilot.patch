@@ -1,0 +1,31 @@
+--- a/Main.qml
++++ b/Main.qml
+@@ -6,6 +6,9 @@
+ 
+ BarWidget {
+   id: root
++  readonly property bool menuOnly: setting("menuOnly", false) === true
++  readonly property real openPanelIndicatorWidth: root.menuOnly ? 0.4 : 0
++  readonly property real openPanelIndicatorHeight: root.menuOnly ? 0.4 : 0
+   moduleName: "jackzasian.relaypilot"
+ 
+   property var relayStatus: ({ loaded: false, online: false, policyVerified: false,
+@@ -53,8 +56,8 @@
+   }
+ 
+   Component.onCompleted: refresh()
+-  implicitWidth: button.implicitWidth
+-  implicitHeight: button.implicitHeight
++  implicitWidth: root.menuOnly ? 0 : (button.implicitWidth)
++  implicitHeight: root.menuOnly ? 0 : (button.implicitHeight)
+ 
+   Process {
+     id: statusProcess
+@@ -77,6 +80,7 @@
+ 
+   WidgetButton {
+     id: button
++    visible: !root.menuOnly
+     anchors.fill: parent
+     bar: root.bar
+     text: "󰒃"

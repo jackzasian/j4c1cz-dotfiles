@@ -1,0 +1,29 @@
+--- a/Panel.qml
++++ b/Panel.qml
+@@ -9,6 +9,7 @@
+ 
+ Panel {
+   id: root
++  readonly property bool menuOnly: setting("menuOnly", false) === true
+   moduleName: "omarchy.tailscale"
+   ipcTarget: "omarchy.tailscale"
+   manageIpc: false
+@@ -335,8 +336,8 @@
+     headerIndex = 0
+   }
+ 
+-  implicitWidth: button.implicitWidth
+-  implicitHeight: button.implicitHeight
++  implicitWidth: root.menuOnly ? 0 : (button.implicitWidth)
++  implicitHeight: root.menuOnly ? 0 : (button.implicitHeight)
+ 
+   onOpenedChanged: if (opened) {
+     cursorActive = false
+@@ -380,6 +381,7 @@
+ 
+   BarIconButton {
+     id: button
++    visible: !root.menuOnly
+     anchors.fill: parent
+     bar: root.bar
+     iconComponent: Component {

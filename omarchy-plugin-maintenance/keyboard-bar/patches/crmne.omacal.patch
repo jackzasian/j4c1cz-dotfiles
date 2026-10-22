@@ -1,0 +1,18 @@
+--- a/manifest.json
++++ b/manifest.json
+@@ -8,13 +8,11 @@
+   "description": "Omarchy's stock clock and calendar with your calendars laid over it: HEY, Google Calendar and .ics feeds side by side, per-calendar event chips on the month grid, a day view, new events from the panel or a quick-add shortcut, reminders as notifications, the next event in the bar, and HEY time tracking.",
+   "kinds": [
+     "service",
+-    "bar-widget",
+-    "overlay"
++    "bar-widget"
+   ],
+   "entryPoints": {
+     "service": "Service.qml",
+-    "barWidget": "BarWidget.qml",
+-    "overlay": "QuickAdd.qml"
++    "barWidget": "BarWidget.qml"
+   },
+   "barWidget": {
+     "displayName": "Calendar",

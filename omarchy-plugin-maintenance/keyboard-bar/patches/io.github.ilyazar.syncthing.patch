@@ -1,0 +1,31 @@
+--- a/hosts/omarchy/OmarchyPanel.qml
++++ b/hosts/omarchy/OmarchyPanel.qml
+@@ -15,6 +15,9 @@
+ Panel {
+     id: root
+ 
++    readonly property bool menuOnly: setting("menuOnly", false) === true
++    readonly property real openPanelIndicatorWidth: root.menuOnly ? 0.4 : 0
++    readonly property real openPanelIndicatorHeight: root.menuOnly ? 0.4 : 0
+     ipcTarget: moduleName
+ 
+     readonly property var syncthing: bar && bar.shell && moduleName ? bar.shell.serviceFor(moduleName) : null
+@@ -818,8 +821,8 @@
+         }
+     }
+ 
+-    implicitWidth: button.implicitWidth
+-    implicitHeight: button.implicitHeight
++    implicitWidth: root.menuOnly ? 0 : (button.implicitWidth)
++    implicitHeight: root.menuOnly ? 0 : (button.implicitHeight)
+ 
+     Timer {
+         id: barTooltipTimer
+@@ -829,6 +832,7 @@
+ 
+     BarIconButton {
+         id: button
++        visible: !root.menuOnly
+         anchors.fill: parent
+         bar: root.bar
+         iconComponent: Component {

@@ -1,0 +1,31 @@
+--- a/Panel.qml
++++ b/Panel.qml
+@@ -8,6 +8,9 @@
+ 
+ Panel {
+   id: root
++  readonly property bool menuOnly: setting("menuOnly", false) === true
++  readonly property real openPanelIndicatorWidth: root.menuOnly ? 0.4 : 0
++  readonly property real openPanelIndicatorHeight: root.menuOnly ? 0.4 : 0
+   moduleName: "local.btcodec"
+   ipcTarget: "local.btcodec"
+ 
+@@ -85,8 +88,8 @@
+     }
+   }
+ 
+-  implicitWidth: button.implicitWidth
+-  implicitHeight: button.implicitHeight
++  implicitWidth: root.menuOnly ? 0 : (button.implicitWidth)
++  implicitHeight: root.menuOnly ? 0 : (button.implicitHeight)
+ 
+   Process {
+     id: listProc
+@@ -124,6 +127,7 @@
+ 
+   WidgetButton {
+     id: button
++    visible: !root.menuOnly
+     anchors.fill: parent
+     bar: root.bar
+     text: root.barText

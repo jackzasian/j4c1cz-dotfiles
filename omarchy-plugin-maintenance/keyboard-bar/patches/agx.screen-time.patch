@@ -1,0 +1,46 @@
+--- a/qml/BarWidget.qml
++++ b/qml/BarWidget.qml
+@@ -7,6 +7,7 @@
+ // Bar button: today's total; hosts the panel. Tracking lives in Service.
+ BarWidget {
+     id: root
++    readonly property bool menuOnly: setting("menuOnly", false) === true
+     moduleName: "agx.screen-time"
+ 
+     readonly property var service: bar && bar.shell ? bar.shell.serviceFor("agx.screen-time") : null
+@@ -105,6 +106,7 @@
+ 
+     // Underline tracks painted label width, like omarchy.clock.
+     readonly property real openPanelIndicatorWidth: {
++        if (root.menuOnly) return 0.4;
+         if (root.iconOnly && !root.vertical && iconGlyph)
+             return Math.max(1, Math.round(iconGlyph.tightWidth));
+         // Vertical mark takes one icon slot.
+@@ -112,7 +114,7 @@
+             return Style.bar.iconSlot;
+         return button.labelWidth;
+     }
+-    readonly property real openPanelIndicatorHeight: Math.max(Style.space(10), Math.round(Style.bar.iconSlot * 0.55))
++    readonly property real openPanelIndicatorHeight: root.menuOnly ? 0.4 : Math.max(Style.space(10), Math.round(Style.bar.iconSlot * 0.55))
+ 
+     // ---- Panel shape contract for shell.summon/hide/toggle routing ---------
+     readonly property bool opened: panelLoader.item ? panelLoader.item.opened === true : false
+@@ -151,8 +153,8 @@
+             target.hostWidget = root;
+     }
+ 
+-    implicitWidth: button.implicitWidth
+-    implicitHeight: button.implicitHeight
++    implicitWidth: root.menuOnly ? 0 : (button.implicitWidth)
++    implicitHeight: root.menuOnly ? 0 : (button.implicitHeight)
+ 
+     onBarChanged: injectPanel()
+     onSettingsChanged: {
+@@ -209,6 +211,7 @@
+ 
+     WidgetButton {
+         id: button
++        visible: !root.menuOnly
+         anchors.fill: parent
+         bar: root.bar
+         // Single label at bar size: glyph + duration render uniformly.

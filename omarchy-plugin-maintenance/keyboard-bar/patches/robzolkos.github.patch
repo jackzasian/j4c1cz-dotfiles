@@ -1,0 +1,31 @@
+--- a/Panel.qml
++++ b/Panel.qml
+@@ -8,6 +8,9 @@
+ 
+ Panel {
+   id: root
++  readonly property bool menuOnly: setting("menuOnly", false) === true
++  readonly property real openPanelIndicatorWidth: root.menuOnly ? 0.4 : 0
++  readonly property real openPanelIndicatorHeight: root.menuOnly ? 0.4 : 0
+   moduleName: "robzolkos.github"
+   ipcTarget: "robzolkos.github"
+   manageIpc: false
+@@ -258,8 +261,8 @@
+     return text + " Reset: " + resetAt
+   }
+ 
+-  implicitWidth: button.implicitWidth
+-  implicitHeight: button.implicitHeight
++  implicitWidth: root.menuOnly ? 0 : (button.implicitWidth)
++  implicitHeight: root.menuOnly ? 0 : (button.implicitHeight)
+ 
+   onOpenedChanged: {
+     // A pending confirmation must never survive the panel closing, or the next
+@@ -317,6 +320,7 @@
+ 
+   BarIconButton {
+     id: button
++    visible: !root.menuOnly
+     anchors.fill: parent
+     bar: root.bar
+     text: ""

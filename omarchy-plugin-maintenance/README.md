@@ -2,7 +2,7 @@
 
 This records four updates and ten additions adapted to Jack's desktop. Popularity and workflow choices are recorded in [catalog-review.md](catalog-review.md). Exact source commits, local patches and validation results are in [plugins.lock.json](plugins.lock.json). Security findings and fixes are in [security-review.md](security-review.md).
 
-The bar keeps compact controls directly accessible. Activity Monitor and Screen Time sit beside workspaces, leaving enough room for the centered calendar and tasks on the smaller laptop display. TaskNotes remains the task source of truth, existing Syncthing sharing and KDE Connect pairings are reused, and calendar events come from the existing private ICS feed. Task completion and editing open native Obsidian. The feed URL, credentials, task contents, screenshots and runtime authentication files are excluded.
+The bar now keeps Tools/workspaces, calendar/tasks, notification history, network, audio and power visible. Occasional panels open through the existing OmaCast launcher with **Super+Ctrl+M**. See the [keyboard bar guide](keyboard-bar/guide.md) and [source recipe](keyboard-bar/README.md). TaskNotes remains the task source of truth, existing Syncthing sharing and KDE Connect pairings are reused, and calendar events come from the existing private ICS feed. Task completion and editing open native Obsidian. The feed URL, credentials, task contents, screenshots and runtime authentication files are excluded.
 
 ## Updated plugins
 

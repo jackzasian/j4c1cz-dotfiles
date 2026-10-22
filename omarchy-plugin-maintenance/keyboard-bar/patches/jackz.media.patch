@@ -1,0 +1,67 @@
+--- a/BarWidget.qml
++++ b/BarWidget.qml
+@@ -6,6 +6,7 @@
+ 
+ BarWidget {
+   id: root
++  readonly property bool menuOnly: setting("menuOnly", false) === true
+   moduleName: "omarchy.media"
+ 
+   readonly property var mediaService: bar?.shell?.firstPartyServiceFor("omarchy.media")
+@@ -19,15 +20,18 @@
+ 
+   property bool popupOpen: false
+ 
++  readonly property bool opened: popupOpen
++  function open() { popupOpen = true }
+   function close() { popupOpen = false }
+   property real maxLabelWidth: 180
+ 
+-  visible: hasMedia
+-  implicitWidth: hasMedia ? row.implicitWidth + Style.space(14) : 0
+-  implicitHeight: barSize
++  visible: hasMedia || root.menuOnly
++  implicitWidth: root.menuOnly ? 0 : (hasMedia ? row.implicitWidth + Style.space(14) : 0)
++  implicitHeight: root.menuOnly ? 0 : (barSize)
+ 
+   Row {
+     id: row
++    visible: !root.menuOnly
+     anchors.centerIn: parent
+     spacing: Style.space(6)
+ 
+@@ -78,6 +82,7 @@
+   }
+ 
+   MouseArea {
++    visible: !root.menuOnly
+     anchors.fill: parent
+     hoverEnabled: true
+     cursorShape: root.activePlayer ? Qt.PointingHandCursor : Qt.ArrowCursor
+@@ -102,14 +107,25 @@
+     onExited: if (root.bar) root.bar.hideTooltip(root)
+   }
+ 
+-  PopupCard {
++  KeyboardPanel {
+     id: popup
++    focusTarget: mediaKeys
+     anchorItem: root
+     bar: root.bar
+     owner: root
+     open: root.popupOpen
+     contentWidth: popup.fittedContentWidth(Style.space(320))
+     contentHeight: popup.fittedContentHeight(column.implicitHeight)
++
++    PanelKeyCatcher {
++      id: mediaKeys
++      anchors.fill: parent
++      onCloseRequested: root.close()
++      onActivateRequested: if (root.mediaService) root.mediaService.runAction("playPause", false)
++      onMoveRequested: function(dx, dy) {
++        if (root.mediaService && dx !== 0) root.mediaService.runAction(dx < 0 ? "previous" : "next", false)
++      }
++    }
+ 
+     Column {
+       id: column

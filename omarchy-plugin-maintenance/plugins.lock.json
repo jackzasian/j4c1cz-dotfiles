@@ -247,5 +247,11 @@
     "ca-certificates-mozilla": "3.132-1",
     "python-certifi": "2026.10.19-1",
     "scope": "Two signed Arch packages only; no full system upgrade or security-agent permission changes."
+  },
+  "keyboard_bar": {
+    "configuration": "shell.json",
+    "sources": "keyboard-bar/",
+    "patch_lock": "keyboard-bar/patches.lock.json",
+    "guide": "keyboard-bar/guide.md"
   }
 }

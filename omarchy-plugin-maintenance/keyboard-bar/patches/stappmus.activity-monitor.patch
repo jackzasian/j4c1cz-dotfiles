@@ -1,0 +1,27 @@
+--- a/Panel.qml
++++ b/Panel.qml
+@@ -7,11 +7,14 @@
+ Panel {
+   id: root
+ 
++  readonly property bool menuOnly: setting("menuOnly", false) === true
++  readonly property real openPanelIndicatorWidth: root.menuOnly ? 0.4 : 0
++  readonly property real openPanelIndicatorHeight: root.menuOnly ? 0.4 : 0
+   moduleName: "stappmus.activity-monitor"
+   ipcTarget: "stappmus.activity-monitor"
+ 
+-  implicitWidth: button.implicitWidth
+-  implicitHeight: button.implicitHeight
++  implicitWidth: root.menuOnly ? 0 : (button.implicitWidth)
++  implicitHeight: root.menuOnly ? 0 : (button.implicitHeight)
+ 
+   property bool expanded: false
+   property bool settingsOpen: false
+@@ -606,6 +609,7 @@
+ 
+   BarIconButton {
+     id: button
++    visible: !root.menuOnly
+     anchors.fill: parent
+     bar: root.bar
+     text: "\uf201"

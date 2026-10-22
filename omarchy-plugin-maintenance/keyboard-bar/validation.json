@@ -1,0 +1,10 @@
+{
+  "panel_checks": 42,
+  "focused_output_mapping_passed": 42,
+  "oma_cast_action_count": 24,
+  "plugins_action_dispatch_passed": true,
+  "visible_widget_slots_per_monitor": 10,
+  "hyprland_config_errors": [],
+  "physical_keyboard_test": "not automated; bindings checked",
+  "security_review": "no new privileges, dynamic commands, remote upload or service-scope bypass found"
+}

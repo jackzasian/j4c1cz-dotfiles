@@ -1,0 +1,29 @@
+--- a/Panel.qml
++++ b/Panel.qml
+@@ -9,6 +9,7 @@
+ 
+ Panel {
+   id: root
++  readonly property bool menuOnly: setting("menuOnly", false) === true
+   moduleName: "omarchy.monitor"
+   ipcTarget: "omarchy.monitor"
+   manageIpc: false
+@@ -353,8 +354,8 @@
+     setTextSize(textSizeStops[idx])
+   }
+ 
+-  implicitWidth: button.implicitWidth
+-  implicitHeight: button.implicitHeight
++  implicitWidth: root.menuOnly ? 0 : (button.implicitWidth)
++  implicitHeight: root.menuOnly ? 0 : (button.implicitHeight)
+ 
+   Component.onCompleted: refresh()
+ 
+@@ -474,6 +475,7 @@
+ 
+   BarIconButton {
+     id: button
++    visible: !root.menuOnly
+     anchors.fill: parent
+     bar: root.bar
+     text: Quickshell.screens.length > 1 ? "󰍺" : "󰍹"

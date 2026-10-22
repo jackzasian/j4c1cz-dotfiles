@@ -1,0 +1,40 @@
+--- a/BarWidget.qml
++++ b/BarWidget.qml
+@@ -5,6 +5,9 @@
+ 
+ BarWidget {
+     id: root
++    readonly property bool menuOnly: setting("menuOnly", false) === true
++    readonly property real openPanelIndicatorWidth: root.menuOnly ? 0.4 : 0
++    readonly property real openPanelIndicatorHeight: root.menuOnly ? 0.4 : 0
+     moduleName: "omaplug"
+ 
+     // The bar's findPanelWidget (Bar.qml) requires open/close/opened on the
+@@ -35,8 +38,8 @@
+         if ("hostWidget" in target) target.hostWidget = root
+     }
+ 
+-    implicitWidth: button.implicitWidth
+-    implicitHeight: button.implicitHeight
++    implicitWidth: root.menuOnly ? 0 : (button.implicitWidth)
++    implicitHeight: root.menuOnly ? 0 : (button.implicitHeight)
+ 
+     onBarChanged: injectPanel()
+     onSettingsChanged: injectPanel()
+@@ -65,6 +68,7 @@
+ 
+     BarIconButton {
+         id: button
++        visible: !root.menuOnly
+         anchors.fill: parent
+         bar: root.bar
+         text: root.opened ? "\udb85\udcd3" : "\udb85\udcd9"
+@@ -79,7 +83,7 @@
+     // open/close state so it stays visible whether or not the panel is open.
+     Rectangle {
+         id: updateBadge
+-        visible: root.pendingUpdateCount > 0
++        visible: !root.menuOnly && root.pendingUpdateCount > 0
+         anchors.top: button.top
+         anchors.right: button.right
+         z: 10

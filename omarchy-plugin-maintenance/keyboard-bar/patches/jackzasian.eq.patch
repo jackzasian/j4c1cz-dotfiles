@@ -1,0 +1,31 @@
+--- a/plugin/Panel.qml
++++ b/plugin/Panel.qml
+@@ -14,6 +14,9 @@
+ // and renders that. Plugging in headphones changes the contents of this popup.
+ Panel {
+   id: root
++  readonly property bool menuOnly: setting("menuOnly", false) === true
++  readonly property real openPanelIndicatorWidth: root.menuOnly ? 0.4 : 0
++  readonly property real openPanelIndicatorHeight: root.menuOnly ? 0.4 : 0
+   moduleName: "local.omarchyeq"
+   ipcTarget: "local.omarchyeq"
+ 
+@@ -114,8 +117,8 @@
+     }
+   }
+ 
+-  implicitWidth: button.implicitWidth
+-  implicitHeight: button.implicitHeight
++  implicitWidth: root.menuOnly ? 0 : (button.implicitWidth)
++  implicitHeight: root.menuOnly ? 0 : (button.implicitHeight)
+ 
+   // The one process the bar normally runs. Everything below it is the
+   // pre-3.1 fallback path and stays idle unless useJson goes false.
+@@ -221,6 +224,7 @@
+ 
+   WidgetButton {
+     id: button
++    visible: !root.menuOnly
+     anchors.fill: parent
+     bar: root.bar
+     text: root.barText

@@ -1,0 +1,29 @@
+--- a/BarWidget.qml
++++ b/BarWidget.qml
+@@ -4,6 +4,7 @@
+ 
+ BarWidget {
+   id: root
++  readonly property bool menuOnly: setting("menuOnly", false) === true
+   moduleName: "omarchy.weather"
+ 
+   function injectPanel() {
+@@ -47,8 +48,8 @@
+   }
+ 
+   visible: panelLoader.item && panelLoader.item.label !== ""
+-  implicitWidth: button.implicitWidth
+-  implicitHeight: button.implicitHeight
++  implicitWidth: root.menuOnly ? 0 : (button.implicitWidth)
++  implicitHeight: root.menuOnly ? 0 : (button.implicitHeight)
+ 
+   onBarChanged: injectPanel()
+   onSettingsChanged: injectPanel()
+@@ -66,6 +67,7 @@
+ 
+   BarIconButton {
+     id: button
++    visible: !root.menuOnly
+     anchors.fill: parent
+     bar: root.bar
+     text: panelLoader.item ? panelLoader.item.label : ""

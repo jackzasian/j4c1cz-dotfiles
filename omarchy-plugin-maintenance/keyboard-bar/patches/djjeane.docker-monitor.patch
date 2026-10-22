@@ -1,0 +1,31 @@
+--- a/Panel.qml
++++ b/Panel.qml
+@@ -9,6 +9,9 @@
+ 
+ Panel {
+   id: root
++  readonly property bool menuOnly: setting("menuOnly", false) === true
++  readonly property real openPanelIndicatorWidth: root.menuOnly ? 0.4 : 0
++  readonly property real openPanelIndicatorHeight: root.menuOnly ? 0.4 : 0
+   moduleName: "djjeane.docker-monitor"
+   ipcTarget: "djjeane.docker-monitor"
+   property var dockerData: ({})
+@@ -195,8 +198,8 @@
+ 
+   Component.onCompleted: { refresh(); refreshMacmini() }
+ 
+-  implicitWidth: button.implicitWidth
+-  implicitHeight: button.implicitHeight
++  implicitWidth: root.menuOnly ? 0 : (button.implicitWidth)
++  implicitHeight: root.menuOnly ? 0 : (button.implicitHeight)
+ 
+   Process {
+     id: monitorProc
+@@ -266,6 +269,7 @@
+ 
+   WidgetButton {
+     id: button
++    visible: !root.menuOnly
+     anchors.fill: parent
+     bar: root.bar
+     text: root.barIcon

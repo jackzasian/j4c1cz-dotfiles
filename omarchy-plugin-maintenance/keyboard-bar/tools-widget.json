@@ -1,0 +1,7 @@
+{
+  "id": "desktop-tools",
+  "type": "command",
+  "text": "󰒓",
+  "tooltip": "Desktop Tools · Super+Ctrl+M",
+  "onClick": "/home/jackz/.local/bin/oma-cast run omarchy:desktop-tools"
+}
