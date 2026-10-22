@@ -1,0 +1,23 @@
+diff --git c/omarchy-github-fetch w/omarchy-github-fetch
+index 5b71f8b..61c448c 100755
+--- c/omarchy-github-fetch
++++ w/omarchy-github-fetch
+@@ -3,6 +3,18 @@
+ # Authentication is delegated entirely to the gh CLI credential store.
+ set -uo pipefail
+ 
++# `gh` on this machine resolves through a mise shim (~/.local/share/mise/shims
++# only reaches the real binary via mise's dispatch, not a direct PATH entry).
++# Invoked from quickshell's non-interactive environment -- no MISE_SHELL, no
++# prior activation -- that shim prints an informational banner to STDOUT on
++# every call ("mise ~/.config/mise/config.toml tools: gh@2.97.0") ahead of
++# gh's real output. Every `gh api ... | jq` below then fails to parse: jq sees
++# that banner line first and reports "invalid API response". An interactive
++# shell never hits this because mise activation already resolved `gh` to the
++# real binary earlier in PATH. MISE_QUIET silences the banner; confirmed with
++# a repro loop against quickshell's actual process environment.
++export MISE_QUIET=1
++
+ include_archived=false
+ include_forks=false
+ include_archived_reviews=false

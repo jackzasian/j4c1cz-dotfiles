@@ -1,0 +1,251 @@
+{
+  "schemaVersion": 1,
+  "reviewed_date": "2026-10-22",
+  "plugins": [
+    {
+      "id": "jackzasian.eq",
+      "name": "Speaker EQ",
+      "action": "updated",
+      "version": "3.1.0",
+      "repository": "https://github.com/jackzasian/omarchy-eq",
+      "commit": "897692e73f1caa08fda549b182c1046481825640",
+      "baseline_commit": "6c43acaf0913d87ff580199f642e14f402cc6748",
+      "source_entry": ".",
+      "adaptation": "Keep existing audio backend, reconnect library, profiles and output switcher; update the bar and repair its dead Git origin.",
+      "previous_version": "3.0.0",
+      "branch": "jackz/plugin-update-20261022"
+    },
+    {
+      "id": "typecraft.oma-cast",
+      "name": "Oma Cast",
+      "action": "updated",
+      "version": "0.0.1",
+      "repository": "https://github.com/jackzasian/oma-cast",
+      "commit": "c3f2265cf50fd490a4486bb0e7f26aff2fc395eb",
+      "baseline_commit": "107484e4836195e89d50975568c6ee75c6c51853",
+      "source_entry": "plugin",
+      "adaptation": "Retain the development checkout and hidden-window focus release; use the default Codex agent only through an explicit launcher action.",
+      "previous_version": "0.0.1",
+      "branch": "jackz/plugin-update-20261022",
+      "upstream_repository": "https://github.com/typecraft-dev/oma-cast",
+      "merged_upstream_commit": "90efedd1b7ff46c49bd8c4f4a248ea926e6a8835"
+    },
+    {
+      "id": "robzolkos.github",
+      "name": "GitHub",
+      "action": "updated",
+      "version": "0.3.0",
+      "repository": "https://github.com/robzolkos/omarchy-github",
+      "commit": "6f361a45ee928119fbb73d26ca2173b9266a9e73",
+      "baseline_commit": "c6e6633b2be7bf55c35b51b1bd7702ba24e64624",
+      "source_entry": ".",
+      "adaptation": "Preserve MISE_QUIET and open links in the existing browser.",
+      "previous_version": "0.2.2",
+      "patches": [
+        {
+          "path": "patches/robzolkos.github.patch",
+          "sha256": "e35fa16fb7a43c3a3110298d5e35e1646c7f365fb790ca325d1ea2942c09a545",
+          "scope": "runtime"
+        }
+      ]
+    },
+    {
+      "id": "evindor.keystroke",
+      "name": "Keystroke",
+      "action": "updated",
+      "version": "1.5.1",
+      "repository": "https://github.com/evindor/keystroke",
+      "commit": "b7a10ca7fb4e4644244b50d29b7b4d16f9db46ff",
+      "baseline_commit": "2d1ab484ed6633a2923364c8a869d18d1eca0246",
+      "source_entry": ".",
+      "adaptation": "Retain compact search-only opening and privacy guards; disabled providers remain disabled.",
+      "previous_version": "1.3.0",
+      "patches": [
+        {
+          "path": "patches/evindor.keystroke.patch",
+          "sha256": "7e54b94d55feb95263d20f90cf8073aa40b48f6e054a856ccd636087e68cd22d",
+          "scope": "runtime and regression tests"
+        }
+      ]
+    },
+    {
+      "id": "jankeesvw.notification-center",
+      "name": "Notification Center",
+      "action": "installed",
+      "version": "1.2.0",
+      "repository": "https://github.com/jankeesvw/omarchy-notification-center",
+      "commit": "029941a55b0ed9a9c437ff474bd7fddaab2d672b",
+      "baseline_commit": "029941a55b0ed9a9c437ff474bd7fddaab2d672b",
+      "source_entry": ".",
+      "adaptation": "Keep three days and at most 500 entries; hide hover previews."
+    },
+    {
+      "id": "stappmus.activity-monitor",
+      "name": "Activity Monitor",
+      "action": "installed",
+      "version": "2.1.1",
+      "repository": "https://github.com/stappmus/omarchy-activity-monitor",
+      "commit": "b25a98c7ff2a688ab74d86d2be42249e2db2f9cf",
+      "baseline_commit": "b25a98c7ff2a688ab74d86d2be42249e2db2f9cf",
+      "source_entry": ".",
+      "adaptation": "Use one resource/process monitor; privileged process-power sampling stays disabled.",
+      "patches": [
+        {
+          "path": "patches/activity-pidnamespace-fixtures.patch",
+          "sha256": "6c542b387308385a518d73b958cd6d39d03f2be85432b3146e4b059f5d193f37",
+          "scope": "tests only; fixture PIDs avoid sandbox PID collisions"
+        }
+      ]
+    },
+    {
+      "id": "io.github.ilyazar.syncthing",
+      "name": "Syncthing",
+      "action": "installed",
+      "version": "0.2.3",
+      "repository": "https://github.com/omarchy-QOL/syncshell",
+      "commit": "45b25c88015c4b482b401b100c4fc5e39f9b96b6",
+      "baseline_commit": "45b25c88015c4b482b401b100c4fc5e39f9b96b6",
+      "source_entry": ".",
+      "adaptation": "Monitor existing managed Syncthing; preserve current folders, devices and service ownership.",
+      "rebuilt_artifact": {
+        "path": "bin/x86_64/syncshell-core",
+        "go_version": "1.27.3",
+        "sha256": "71c7f0f1fd46e9debad269e94455b291c97cc4f7c0eba53c1aa7d9be10424666",
+        "source_only_in_repository": true,
+        "recipe": "README.md#rebuild-the-syncshell-core"
+      }
+    },
+    {
+      "id": "omaconnect",
+      "name": "OmaConnect",
+      "action": "installed",
+      "version": "1.5.0",
+      "repository": "https://github.com/jackzasian/omaconnect",
+      "commit": "1e78baa215e79b3408c6976c8348000ed16341eb",
+      "baseline_commit": "71282d2042b1a1cda1cb1cac84251694eaabb7cb",
+      "source_entry": ".",
+      "adaptation": "Use existing KDE Connect pairing; hide remote commands, SMS and media controls; include Tailscale visibility.",
+      "branch": "codex/security-20261022",
+      "upstream_repository": "https://github.com/jitendradara12/omaconnect",
+      "security_commits": [
+        "ad3b69a0c78d66c8b2f7e2176cfc47bbf46911bd",
+        "1e78baa215e79b3408c6976c8348000ed16341eb"
+      ]
+    },
+    {
+      "id": "omaplug",
+      "name": "Plugin Manager",
+      "action": "installed",
+      "version": "1.6.6",
+      "repository": "https://github.com/fross100/omaplug",
+      "commit": "64df56e876846247ded550890c52b7b190776b3e",
+      "baseline_commit": "64df56e876846247ded550890c52b7b190776b3e",
+      "source_entry": ".",
+      "adaptation": "Manual updates; compressed public catalog through existing RelayPilot fallback when no HTTPS/ALL proxy is inherited; bounded120-second timeout and16MiB expanded-size limit.",
+      "patches": [
+        {
+          "path": "patches/omaplug.patch",
+          "sha256": "6094df5219eb9b713f88183a5387a4f2b9041a85d0017e8b7ff516650e2913f5",
+          "scope": "runtime and regression tests"
+        }
+      ]
+    },
+    {
+      "id": "doghouse-mike.omatasknotes",
+      "name": "OmaTaskNotes",
+      "action": "installed",
+      "version": "0.2.2",
+      "repository": "https://github.com/jackzasian/omatasknotes",
+      "commit": "0e2a3f804ca7bb9e0c9ce39a64341770e268b4b3",
+      "baseline_commit": "8cf280e241459970dbc3cb41757fd2a1bdcbe1d7",
+      "source_entry": ".",
+      "adaptation": "Read the canonical TaskNotes vault; open tasks in native Obsidian for edits and completion.",
+      "branch": "desktop/tasknotes-readonly-20261022",
+      "upstream_repository": "https://github.com/Doghouse-Mike/omatasknotes",
+      "settings": {
+        "readOnly": true
+      }
+    },
+    {
+      "id": "crmne.omacal",
+      "name": "Calendar for Omarchy",
+      "action": "installed",
+      "version": "1.2.1",
+      "repository": "https://github.com/crmne/omacal",
+      "commit": "95ee533b28bb9e273185dfc5b3bcdb92df25d01f",
+      "baseline_commit": "95ee533b28bb9e273185dfc5b3bcdb92df25d01f",
+      "source_entry": ".",
+      "adaptation": "View the existing private calendar feed; Google/HEY integration, live sync, place suggestions and duplicate reminders disabled."
+    },
+    {
+      "id": "crmne.hyprmoncfg",
+      "name": "hyprmoncfg: Multi-Monitor Manager for Omarchy",
+      "action": "installed",
+      "version": "2.10.0",
+      "repository": "https://github.com/crmne/omarchy-hyprmoncfg",
+      "commit": "3e9fa1feb3e64352773e818eb4fd6cd496976e39",
+      "baseline_commit": "3e9fa1feb3e64352773e818eb4fd6cd496976e39",
+      "source_entry": ".",
+      "adaptation": "Provide docking/monitor controls using the already-installed hyprmoncfg backend; restarted its stale daemon to load installed1.25.1 without changing active profile or geometry."
+    },
+    {
+      "id": "agx.screen-time",
+      "name": "Screen Time",
+      "action": "installed",
+      "version": "1.6.2",
+      "repository": "https://github.com/ax1g/quickshell-screentime-plugin",
+      "commit": "2c7b75abde55b23ee6d6e1356797c8f50f60b8a1",
+      "baseline_commit": "2c7b75abde55b23ee6d6e1356797c8f50f60b8a1",
+      "source_entry": ".",
+      "adaptation": "Keep the bar icon compact; local screen-time history only."
+    },
+    {
+      "id": "io.github.mnsosa.backup-history",
+      "name": "Backup History",
+      "action": "installed",
+      "version": "0.3.0",
+      "repository": "https://github.com/POSO-PocketSolutions/omarchy-backup-history",
+      "commit": "23e8eaa139b4feb4cb8ac6edbea29f7c9f7178f3",
+      "baseline_commit": "23e8eaa139b4feb4cb8ac6edbea29f7c9f7178f3",
+      "source_entry": ".",
+      "adaptation": "Show four weeks of local backup history alongside the existing wider backup dashboard."
+    }
+  ],
+  "privacy": {
+    "calendar_feed": "Existing private ICS endpoint; URL and credentials deliberately excluded.",
+    "task_edits": "Native Obsidian/TaskNotes; plugin read-only.",
+    "keystroke": {
+      "palette.searchBarOnly": true,
+      "providers.codex.enabled": false,
+      "providers.ai.enabled": false,
+      "providers.ai.autoSend": false,
+      "providers.clipboard.enabled": false,
+      "providers.extensions.enabled": false,
+      "matching.mode": "off",
+      "voice.enabled": false
+    }
+  },
+  "validation": {
+    "speaker_eq": "332 unit tests; shellcheck and manifest validation passed",
+    "oma_cast": "88 Node tests and shell syntax passed; 5 launcher toggles, worst 89 ms",
+    "github_keystroke": "Helper/cache/QML checks and actual-palette privacy guard regression passed; 272 QML tests reported by updating agent",
+    "activity": "249 assertions with test-only PID-namespace fixture patch; foreign-user/kernel-thread cases skipped when unavailable",
+    "notification_center": "13 tests passed",
+    "screen_time": "355 JS and 32 Python tests passed",
+    "hyprmoncfg": "219 tests passed; daemon1.25.1 status/editor_state IPC succeeded; two-display geometry preserved.",
+    "backup_history": "30 tests passed",
+    "omaconnect": "90 security and behavior tests passed, including actual Qt remote-image injection regression.",
+    "omacal": "Supported runtime suite passed across five time zones; 480 independent system-zoneinfo round trips passed. Node26 Casablanca assertion differs with ICU tz2026b versus system tzdata2026e.",
+    "syncshell": "All 8 core packages passed go test -race using Go1.27.3; exact Linux package graph excludes x/sys/windows",
+    "runtime": "All ten new plugins rendered on both screens; TaskNotes Today, calendar feed, notification watcher, process monitor, phone, Syncthing, Screen Time, Backup History and display IPC exercised.",
+    "omaplug": "Full suite, gzip negotiation, expanded-size rejection and inherited/fallback proxy regressions passed; live desktop loaded5856 catalog entries on both monitors.",
+    "backup_history_runtime": "Latest job failed with rsync I/O timeout (code30); last successOctober12. Widget reflects status; backup service left unchanged.",
+    "restart_transition": "One older shell crashed on daemon socket closure during22:20 restart and recovered automatically; Qt callback attribution unresolved. Final22:27 shell and display panel stable, no later core during verification."
+  },
+  "evidence_directory": "/home/jackz/.local/state/omarchy-plugin-upgrade/20261022-213736",
+  "system_security": {
+    "ca-certificates-mozilla": "3.132-1",
+    "python-certifi": "2026.10.19-1",
+    "scope": "Two signed Arch packages only; no full system upgrade or security-agent permission changes."
+  }
+}

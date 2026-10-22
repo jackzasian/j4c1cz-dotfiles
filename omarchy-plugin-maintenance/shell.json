@@ -1,0 +1,181 @@
+{
+  "bar": {
+    "centerAnchor": "crmne.omacal",
+    "layout": {
+      "center": [
+        {
+          "id": "omarchy.indicators"
+        },
+        {
+          "id": "omarchy.keyboard-layout"
+        },
+        {
+          "format": "dddd HH:mm",
+          "formatAlt": "d MMMM 'W'ww yyyy",
+          "id": "crmne.omacal",
+          "verticalFormat": "HH\n—\nmm",
+          "heyEnabled": false,
+          "googleEnabled": false,
+          "feedsEnabled": true,
+          "liveSync": false,
+          "placeSuggestions": false,
+          "quickAddShortcut": "",
+          "timeFormat": "24",
+          "refreshIntervalSec": 300,
+          "barEvent": "off",
+          "notifications": false,
+          "alertLeadMinutes": 15
+        },
+        {
+          "id": "doghouse-mike.omatasknotes",
+          "vaultPath": "/home/jackz/Obsidian/J4c1c",
+          "viewId": "base:TaskNotes/Views/tasks-default.base::Today",
+          "readOnly": true,
+          "countMode": "all",
+          "refreshIntervalSec": 60
+        },
+        {
+          "id": "omarchy.weather"
+        },
+        {
+          "id": "mykcib.obsidian-quickedit"
+        },
+        {
+          "id": "omarchy.system-update"
+        },
+        {
+          "id": "djjeane.docker-monitor"
+        }
+      ],
+      "left": [
+        {
+          "id": "evindor.keystroke"
+        },
+        {
+          "id": "omarchy.workspaces"
+        },
+        {
+          "id": "stappmus.activity-monitor",
+          "samplingSpeed": "Efficient",
+          "historySamples": 60,
+          "temperatureUnit": "Celsius",
+          "openExpanded": true,
+          "processPowerEnabled": false
+        },
+        {
+          "id": "agx.screen-time",
+          "iconOnly": true,
+          "dailyGoalLog": [],
+          "hideEasterEggs": true
+        },
+        {
+          "id": "omarchy.media"
+        }
+      ],
+      "right": [
+        {
+          "id": "omarchy.tray"
+        },
+        {
+          "id": "jankeesvw.notification-center",
+          "keepDays": 3,
+          "maxItems": 500,
+          "badge": "Dot",
+          "showPreview": false,
+          "clickAction": "Focus the app",
+          "showBody": true,
+          "panelWidth": 420
+        },
+        {
+          "id": "io.github.ilyazar.syncthing",
+          "refreshIntervalSec": 60
+        },
+        {
+          "id": "omaconnect",
+          "showBarBattery": false,
+          "showTailscale": true,
+          "showTroubleshooting": false,
+          "showRemoteCommands": false,
+          "showMediaPlayer": false,
+          "showActionSms": false
+        },
+        {
+          "id": "io.github.mnsosa.backup-history",
+          "service": "backup-thinkpad-to-mac.service",
+          "scope": "user",
+          "weeks": 4,
+          "refreshIntervalSec": 300
+        },
+        {
+          "id": "omaplug",
+          "autoCheckUpdates": false,
+          "autoCheckIntervalHours": 24,
+          "bulkUpdateScope": "verified"
+        },
+        {
+          "id": "crmne.hyprmoncfg",
+          "showBarIcon": true
+        },
+        {
+          "id": "bt.codecs"
+        },
+        {
+          "id": "jackzasian.eq"
+        },
+        {
+          "id": "jackzasian.relaypilot",
+          "refreshIntervalSec": 10
+        },
+        {
+          "actionScanBehavior": "Off",
+          "id": "robzolkos.github",
+          "refreshIntervalSec": 300,
+          "linkBehavior": "Browser tab"
+        },
+        {
+          "id": "omarchy.tailscale"
+        },
+        {
+          "id": "omarchy.bluetooth"
+        },
+        {
+          "id": "jackz.agents",
+          "refreshIntervalSec": 300
+        },
+        {
+          "id": "omarchy.network"
+        },
+        {
+          "id": "omarchy.audio"
+        },
+        {
+          "id": "omarchy.monitor"
+        },
+        {
+          "id": "omarchy.power"
+        }
+      ]
+    },
+    "position": "top",
+    "transparent": false
+  },
+  "cloneSourceRestores": [
+    "evindor.keystroke"
+  ],
+  "disabledPlugins": [
+    "omarchy.menu",
+    "omarchy.clock"
+  ],
+  "plugins": [
+    {
+      "id": "omarchy.agents"
+    },
+    {
+      "id": "jackzasian.obsidian-capture"
+    },
+    {
+      "id": "typecraft.oma-cast"
+    }
+  ],
+  "version": 1
+}

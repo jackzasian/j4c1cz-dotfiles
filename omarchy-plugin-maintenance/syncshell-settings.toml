@@ -1,0 +1,9 @@
+version = 2
+
+[style]
+icon_style = "themed"
+web_ui_theme = "default"
+
+[service]
+service_state = "enabled"
+probe_interval_seconds = 60

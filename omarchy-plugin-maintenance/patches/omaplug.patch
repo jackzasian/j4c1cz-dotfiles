@@ -1,0 +1,121 @@
+diff --git c/marketplace-catalog.sh w/marketplace-catalog.sh
+index c00ea0a..b4a720d 100755
+--- c/marketplace-catalog.sh
++++ w/marketplace-catalog.sh
+@@ -4,7 +4,12 @@ set -euo pipefail
+ 
+ CATALOG_URL=${1:-https://plugins.omarchy.org/catalog.json}
+ 
+-curl -fsSL --max-time 30 --max-filesize 16777216 "$CATALOG_URL" |
++# The desktop does not inherit Jack's shell proxy; reuse existing RelayPilot.
++if [[ -z ${https_proxy:-}${HTTPS_PROXY:-}${all_proxy:-}${ALL_PROXY:-} ]]; then
++  export https_proxy=http://127.0.0.1:7897
++fi
++
++curl -fsSL --compressed --max-time 120 --max-filesize 16777216 "$CATALOG_URL" |
+   jq -ce '
+     if (.plugins | type) != "array" then
+       error("catalog.plugins is not an array")
+diff --git c/tests/catalog-fetch-test.sh w/tests/catalog-fetch-test.sh
+index abeab0c..5df9012 100755
+--- c/tests/catalog-fetch-test.sh
++++ w/tests/catalog-fetch-test.sh
+@@ -6,7 +6,15 @@ ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+ PANEL="$ROOT/Panel.qml"
+ HELPER="$ROOT/marketplace-catalog.sh"
+ TMP=$(mktemp -d)
+-trap 'rm -rf -- "$TMP"' EXIT
++SERVER_PID=""
++cleanup() {
++  if [[ -n $SERVER_PID ]]; then
++    kill "$SERVER_PID" 2>/dev/null || true
++    wait "$SERVER_PID" 2>/dev/null || true
++  fi
++  rm -rf -- "$TMP"
++}
++trap cleanup EXIT
+ 
+ grep -Fq 'Qt.resolvedUrl("marketplace-catalog.sh")' "$PANEL"
+ grep -Fq 'marketplaceProcess.command = [root.marketplaceHelperPath]' "$PANEL"
+@@ -48,4 +56,69 @@ jq -e '.plugins[0] == {
+ }' <<< "$SUMMARY" >/dev/null
+ test "$(wc -c <<< "$SUMMARY")" -lt 4096
+ 
++# The live catalog is large enough to time out on slower links without gzip.
++# Exercise negotiation and the decompressed size limit with a local server.
++python3 -I - "$FIXTURE" "$TMP/endpoint" <<'PY' &
++import gzip
++import http.server
++import pathlib
++import sys
++
++catalog = gzip.compress(pathlib.Path(sys.argv[1]).read_bytes())
++oversized = gzip.compress(b'{"plugins":[],"ignored":"' + b'x' * 16777216 + b'"}')
++
++class Handler(http.server.BaseHTTPRequestHandler):
++    def do_GET(self):
++        if 'gzip' not in self.headers.get('Accept-Encoding', ''):
++            self.send_error(408, 'Compression required on this slow link')
++            return
++        body = oversized if self.path == '/oversized' else catalog
++        self.send_response(200)
++        self.send_header('Content-Type', 'application/json')
++        self.send_header('Content-Encoding', 'gzip')
++        self.send_header('Content-Length', str(len(body)))
++        self.end_headers()
++        try:
++            self.wfile.write(body)
++        except (BrokenPipeError, ConnectionResetError):
++            pass
++
++    def log_message(self, *_args):
++        pass
++
++with http.server.HTTPServer(('127.0.0.1', 0), Handler) as server:
++    pathlib.Path(sys.argv[2]).write_text(f'http://127.0.0.1:{server.server_port}')
++    server.serve_forever()
++PY
++SERVER_PID=$!
++for _ in {1..100}; do
++  [[ -s $TMP/endpoint ]] && break
++  sleep 0.01
++done
++test -s "$TMP/endpoint"
++ENDPOINT=$(<"$TMP/endpoint")
++SUMMARY=$("$HELPER" "$ENDPOINT/catalog")
++jq -e '.plugins | length == 1' <<< "$SUMMARY" >/dev/null
++if "$HELPER" "$ENDPOINT/oversized" > "$TMP/oversized.out" 2>/dev/null; then
++  printf 'FAIL: compressed catalogs above the decompressed size cap must be rejected\n' >&2
++  exit 1
++fi
++
++# Desktop services do not inherit the interactive shell's proxy variables.
++mkdir "$TMP/bin"
++cat > "$TMP/bin/curl" <<'SH'
++#!/bin/bash
++printf '%s\n' "${https_proxy:-${HTTPS_PROXY:-${all_proxy:-${ALL_PROXY:-}}}}" > "$OMAPLUG_TEST_PROXY_CAPTURE"
++printf '{"plugins":[]}\n'
++SH
++chmod +x "$TMP/bin/curl"
++env -u https_proxy -u HTTPS_PROXY -u all_proxy -u ALL_PROXY \
++  PATH="$TMP/bin:$PATH" OMAPLUG_TEST_PROXY_CAPTURE="$TMP/proxy" \
++  "$HELPER" >/dev/null
++test "$(<"$TMP/proxy")" == "http://127.0.0.1:7897"
++env -u https_proxy -u all_proxy -u ALL_PROXY HTTPS_PROXY=http://preferred.invalid:8080 \
++  PATH="$TMP/bin:$PATH" OMAPLUG_TEST_PROXY_CAPTURE="$TMP/proxy" \
++  "$HELPER" >/dev/null
++test "$(<"$TMP/proxy")" == "http://preferred.invalid:8080"
++
+ printf 'catalog-fetch-test: ok\n'
+diff --git c/tests/run.sh w/tests/run.sh
+index 950efc8..6030119 100755
+--- c/tests/run.sh
++++ w/tests/run.sh
+@@ -8,6 +8,7 @@ ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+ "$ROOT/update-helper-test.sh"
+ "$ROOT/quickshell-detached-test.sh"
+ bash "$ROOT/verification-status-test.sh"
++"$ROOT/catalog-fetch-test.sh"
+ node "$ROOT/plugin-metadata-test.cjs"
+ node "$ROOT/presentation-links-test.cjs"
+ node "$ROOT/bulk-update-scope-test.cjs"

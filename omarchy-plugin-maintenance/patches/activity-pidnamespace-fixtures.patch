@@ -1,0 +1,45 @@
+diff --git i/test/activity-test.sh w/test/activity-test.sh
+index b6d1aba..a71d723 100755
+--- i/test/activity-test.sh
++++ w/test/activity-test.sh
+@@ -572,16 +572,18 @@ pass "activity reader excludes its own sampling process"
+ fixture_root=$(mktemp -d)
+ trap 'rm -rf -- "$fixture_root"' EXIT
+ 
+-mkdir -p "$fixture_root/proc/101" "$fixture_root/proc/102" "$fixture_root/proc/103"
++# Keep synthetic PIDs above Linux's PID limit so a PID namespace cannot
++# assign the sampler PID 101 and make its self-filter drop the fixture.
++mkdir -p "$fixture_root/proc/4194305" "$fixture_root/proc/4194306" "$fixture_root/proc/4194307"
+ printf '200.00 100.00\n' >"$fixture_root/proc/uptime"
+ printf '%s\n' \
+-  '101 (worker task) R 1 1 1 0 -1 0 0 0 0 0 12 8 0 0 20 0 3 0 1000 4096000 25' \
+-  >"$fixture_root/proc/101/stat"
++  '4194305 (worker task) R 1 1 1 0 -1 0 0 0 0 0 12 8 0 0 20 0 3 0 1000 4096000 25' \
++  >"$fixture_root/proc/4194305/stat"
+ printf 'Name:\tworker task\nUid:\t1000\t1000\t1000\t1000\nVmRSS:\t120 kB\n' \
+-  >"$fixture_root/proc/101/status"
++  >"$fixture_root/proc/4194305/status"
+ printf '%s\n' \
+-  '103 (kernel worker) I 2 0 0 0 0 2097152 0 0 0 0 0 0 0 0 20 0 1 0 1000 0 0' \
+-  >"$fixture_root/proc/103/stat"
++  '4194307 (kernel worker) I 2 0 0 0 0 2097152 0 0 0 0 0 0 0 0 20 0 1 0 1000 0 0' \
++  >"$fixture_root/proc/4194307/stat"
+ printf 'alice:x:1000:1000:Alice:/home/alice:/bin/bash\n' >"$fixture_root/passwd"
+ 
+ fixture_process_snapshot=$(
+@@ -591,13 +593,13 @@ fixture_process_snapshot=$(
+     OMARCHY_SYSTEM_STATS_PAGE_SIZE=4096 \
+     "$ROOT/activity-stats" --activity-processes
+ )
+-grep -Fq $'process\t101\talice\tR\t1000\t20\t100\tworker task' \
++grep -Fq $'process\t4194305\talice\tR\t1000\t20\t100\tworker task' \
+   <<<"$fixture_process_snapshot" || fail "activity process collector reads a stable fixture process"
+ [[ $(grep -c '^process' <<<"$fixture_process_snapshot") -eq 1 ]] ||
+   fail "activity process collector did not skip a vanished fixture PID"
+ pass "activity process collector skips PIDs that vanish during a snapshot"
+ 
+-if grep -Fq $'process\t103\t' <<<"$fixture_process_snapshot"; then
++if grep -Fq $'process\t4194307\t' <<<"$fixture_process_snapshot"; then
+   fail "activity process collector included a kernel thread"
+ fi
+ pass "activity process collector omits non-actionable kernel threads"

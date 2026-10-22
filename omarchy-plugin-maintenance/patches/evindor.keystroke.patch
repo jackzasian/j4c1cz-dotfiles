@@ -1,0 +1,304 @@
+diff --git c/Keystroke.qml w/Keystroke.qml
+index cc1cfc5..fb5a9f2 100644
+--- c/Keystroke.qml
++++ w/Keystroke.qml
+@@ -116,6 +116,8 @@ Item {
+   property var config: Settings.empty()
+   property string configError: ""
+   readonly property var paletteSchema: [
++    { key: "searchBarOnly", type: "boolean", label: "Open with only the search bar", "default": false,
++      description: "Hide the initial provider list until you type; menus and pickers still open normally" },
+     { key: "density", type: "enum", label: "Layout density", "default": "compact", options: ["compact", "comfortable"], description: "Compact uses a narrower window and shorter rows" },
+     { key: "accent", type: "enum", label: "Accent color", "default": "theme", options: ["theme", "ember", "violet", "mint"], description: "Theme follows the active Omarchy theme" },
+     { key: "showPreview", type: "boolean", label: "Show result previews", "default": true },
+@@ -1138,6 +1140,7 @@ Item {
+     if (root.confirmPending) return
+     if (root.dictationMode) { root.dictationAccept(alternate); return }
+     if (debounce.running || refresh.running) root.runQuery()
++    if (root.searchOnly) return
+     if (root.dmenuActive) {
+       if (root.mode === "input") { root.applyDmenuSelection(search.text); return }
+       if (root.rows.length) { root.flash(root.current.uid); root.applyDmenuSelection(root.current.value) }
+@@ -1153,13 +1156,18 @@ Item {
+     }
+     var entry = root.registryEntry(row.providerKey)
+     if (!entry || !root.providerEnabled(entry)) return
+-    var effect = alternate && row.altAction ? row.altAction : row.action
+-    if (typeof entry.provider.activate === "function") {
+-      try { effect = entry.provider.activate(row, { host: root, settings: root.settingsFor(entry), alternate: alternate === true }) || effect } catch (e) { root.errorMessage = entry.provider.name + ": " + e; return }
+-    }
+-    if (!effect) return
+     root.flash(row.uid)
+-    var run = function() { root.remember(row); root.perform(effect, row) }
++    // Local security guard: provider callbacks may execute commands themselves.
++    // Invoke them only after the user accepts the confirmation.
++    var run = function() {
++      var effect = alternate && row.altAction ? row.altAction : row.action
++      if (typeof entry.provider.activate === "function") {
++        try { effect = entry.provider.activate(row, { host: root, settings: root.settingsFor(entry), alternate: alternate === true }) || effect } catch (e) { root.errorMessage = entry.provider.name + ": " + e; return }
++      }
++      if (!effect) return
++      root.remember(row)
++      root.perform(effect, row)
++    }
+     if (row.confirm) root.confirmPending = { message: row.confirm, detail: row.confirmDetail || "", confirmText: row.confirmText || "Confirm", cancelText: row.cancelText || "Cancel", run: run }
+     else run()
+   }
+@@ -1245,7 +1253,7 @@ Item {
+   }
+   function inspect() {
+     var appEntries = root.appLibrary ? root.appLibrary.sortedEntries("") : []
+-    return JSON.stringify({ opened: root.opened, mode: root.mode, view: root.activeProviderKey, scope: root.scope, query: search.text, count: root.rows.length,
++    return JSON.stringify({ opened: root.opened, searchOnly: root.searchOnly, cardHeight: card.height, headerHeight: root.headerHeight, contentVisible: content.visible, mode: root.mode, view: root.activeProviderKey, scope: root.scope, query: search.text, count: root.rows.length,
+       command: root.activeCommand ? { key: root.activeCommand.key, prefix: root.activeCommand.prefix, rest: root.activeCommand.rest } : null, hint: root.commandHint, ghost: root.commandGhost,
+       titles: root.rows.map(function(r) { return r.title }), selected: root.selected, pending: root.pending, patterns: root.lastPatterns,
+       current: { uid: root.current.uid || "", icon: root.current.icon || "", iconSource: root.current.iconSource || "", badge: root.current.badge || "", tier: root.current.tier || "" },
+@@ -1258,6 +1266,10 @@ Item {
+   }
+ 
+   // ------------------------------------------------------------------ view
++  // Start with only the search field; retain full views for queries and routes.
++  readonly property bool searchOnly: root.paletteSettings.searchBarOnly && !root.dmenuActive && !root.scope && !root.providerViewActive
++      && !search.text.trim() && !search.preeditText && !voice.active
++      && !root.confirmPending && !root.errorMessage && !root.configError
+   readonly property int headerHeight: Style.space(compact ? 66 : 78)
+   readonly property int crumbHeight: Style.space(30)
+   readonly property int footerHeight: Style.space(46)
+@@ -1294,6 +1306,7 @@ Item {
+       width: Math.min(root.dmenuActive ? Style.space(root.dmenuWidth) : Style.space(root.compact ? 640 : 760), panel.width - Style.gapsOut * 2)
+       height: root.dmenuActive
+         ? Math.min(root.headerHeight + (root.mode === "input" ? Style.space(12) : root.dmenuRowsHeight + Style.space(20)), panel.height - Style.gapsOut * 2)
++        : root.searchOnly ? root.headerHeight
+         : Math.min(Style.space(root.compact ? 540 : 580), panel.height - Style.gapsOut * 2)
+       anchors.horizontalCenter: parent.horizontalCenter
+       y: (root.dmenuActive ? Math.max(Style.gapsOut, Math.round((panel.height - height) / 2)) : Math.max(Style.gapsOut, Math.round((panel.height - height) * 0.38)))
+@@ -1497,12 +1510,12 @@ Item {
+         }
+         Keycap { id: escCap; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; label: "esc"; foreground: root.foreground }
+       }
+-      Rectangle { x: 0; y: root.headerHeight; width: parent.width; height: 1; color: root.hairline }
++      Rectangle { visible: !root.searchOnly; x: 0; y: root.headerHeight; width: parent.width; height: 1; color: root.hairline }
+ 
+       // Breadcrumb line (palette mode)
+       Row {
+         id: crumbs
+-        visible: !root.dmenuActive
++        visible: !root.dmenuActive && !root.searchOnly
+         transform: levelShift
+         opacity: root.levelOpacity
+         x: Style.space(root.compact ? 22 : 26); y: root.headerHeight + Style.space(8)
+@@ -1525,12 +1538,13 @@ Item {
+       // Results and preview
+       Item {
+         id: content
++        visible: !root.searchOnly
+         transform: levelShift
+         opacity: root.levelOpacity
+         x: Style.space(12)
+         y: root.dmenuActive ? root.headerHeight + Style.space(10) : root.headerHeight + root.crumbHeight + Style.space(10)
+         width: parent.width - Style.space(24)
+-        height: parent.height - y - (root.dmenuActive ? Style.space(10) : root.footerHeight + Style.space(10))
++        height: Math.max(0, parent.height - y - (root.dmenuActive ? Style.space(10) : root.footerHeight + Style.space(10)))
+ 
+         ListView {
+           id: resultList
+@@ -1644,9 +1658,9 @@ Item {
+       }
+ 
+       // Footer (palette mode)
+-      Rectangle { visible: !root.dmenuActive; x: 0; y: parent.height - root.footerHeight; width: parent.width; height: 1; color: root.hairline }
++      Rectangle { visible: !root.dmenuActive && !root.searchOnly; x: 0; y: parent.height - root.footerHeight; width: parent.width; height: 1; color: root.hairline }
+       Item {
+-        visible: !root.dmenuActive
++        visible: !root.dmenuActive && !root.searchOnly
+         x: Style.space(22); y: parent.height - root.footerHeight; width: parent.width - Style.space(44); height: root.footerHeight
+         Row {
+           anchors.verticalCenter: parent.verticalCenter; spacing: Style.space(8)
+diff --git c/bin/keystroke w/bin/keystroke
+index 4ebd489..7b0680e 100755
+--- c/bin/keystroke
++++ w/bin/keystroke
+@@ -87,6 +87,7 @@ case "${1:-help}" in
+     uv run --with-requirements "$ROOT/matching/requirements.lock" python "$ROOT/tests/matching_engine_check.py"
+     python3 "$ROOT/tests/voice_session_check.py"
+     python3 "$ROOT/tests/clipboard_provider_check.py"
++    python3 "$ROOT/tests/local_guards_check.py"
+     python3 "$ROOT/tests/clipboard_paste_shortcut_check.py"
+     python3 "$ROOT/tests/clipboard_transfer_check.py"
+     python3 "$ROOT/tests/codex_start_check.py"
+diff --git c/matching/requirements.lock w/matching/requirements.lock
+index d54890f..0be3b73 100644
+--- c/matching/requirements.lock
++++ w/matching/requirements.lock
+@@ -4,9 +4,9 @@ anyio==4.15.1 \
+     --hash=sha256:6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101 \
+     --hash=sha256:9f28306018cbd6d329e64a36d58256edff76dd996fe423bc957326e578b82a94
+     # via httpx
+-certifi==2026.7.22 \
+-    --hash=sha256:62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775 \
+-    --hash=sha256:741e2c3b351ddf169a738da9f2c048608ff7f2c5cc02f1ebc6b118bb090d5d55
++certifi==2026.10.19 \
++    --hash=sha256:42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8670e1b \
++    --hash=sha256:035c1e85572b141bf1c3a3eff0e33a8eb74917522f2559075ff8d2fea780a1ae
+     # via
+     #   httpcore
+     #   httpx
+diff --git c/providers/Clipboard.qml w/providers/Clipboard.qml
+index 5b4b456..3b92a21 100644
+--- c/providers/Clipboard.qml
++++ w/providers/Clipboard.qml
+@@ -2,6 +2,7 @@ import QtQuick
+ import Quickshell
+ import Quickshell.Io
+ import "../core/Match.js" as Match
++import "../core/Settings.js" as Settings
+ 
+ // Reads the history Omarchy's clipboard overlay already maintains. No second
+ // watcher, no duplicate capture. Never included in the global search.
+@@ -32,10 +33,11 @@ Item {
+ 
+   FileView {
+     id: historyFile
+-    path: root.historyPath
++    path: root.host && Settings.isEnabled(root.host.config, ["providers", "clipboard"], false) ? root.historyPath : ""
+     watchChanges: true
+     printErrors: false
+-    onLoaded: root.parse(text())
++    onPathChanged: if (!path) root.entries = []
++    onLoaded: if (path) root.parse(text())
+     onLoadFailed: root.entries = []
+     onFileChanged: reload()
+   }
+diff --git c/providers/Registry.qml w/providers/Registry.qml
+index 0294bf2..d3541b5 100644
+--- c/providers/Registry.qml
++++ w/providers/Registry.qml
+@@ -107,7 +107,11 @@ Item {
+     root.manifests = found.manifests
+     root.sync(true)
+   }
+-  function switchedOn(id) { return Settings.isEnabled(root.host ? root.host.config : null, ["providers", id], false) }
++  function switchedOn(id) {
++    var config = root.host ? root.host.config : null
++    return Settings.isEnabled(config, ["providers", "extensions"], true)
++        && Settings.isEnabled(config, ["providers", id], false)
++  }
+ 
+   // Reconcile the services with the manifests and the switches: create what
+   // is on and not running, destroy what is off or gone, keep the rest.
+diff --git c/tests/local_guards_check.py w/tests/local_guards_check.py
+new file mode 100644
+index 0000000..fa94433
+--- /dev/null
++++ w/tests/local_guards_check.py
+@@ -0,0 +1,110 @@
++#!/usr/bin/env python3
++"""Exercise local privacy, confirmation and compact-menu guards offscreen."""
++import json
++import os
++from pathlib import Path
++import shutil
++import subprocess
++import tempfile
++
++root = Path(__file__).resolve().parents[1]
++with tempfile.TemporaryDirectory(prefix="keystroke-local-guards-") as temp:
++    work = Path(temp)
++    project = work / "project"
++    shutil.copytree(root, project, ignore=shutil.ignore_patterns(".git", "tests", "__pycache__", "experiments"))
++    (work / "qs").symlink_to("/usr/share/omarchy/shell")
++    source = project / "Keystroke.qml"
++    qml = source.read_text().replace("  PanelWindow {", "  Window {\n    transientParent: null\n    width: 1000; height: 800")
++    qml = qml.replace("    anchors { top: true; bottom: true; left: true; right: true }\n", "")
++    source.write_text("\n".join(line for line in qml.splitlines() if "exclusionMode:" not in line and "WlrLayershell." not in line))
++    config = work / ".config/omarchy/keystroke.json"
++    config.parent.mkdir(parents=True)
++    config.write_text(json.dumps({"version": 1, "matching": {"mode": "off"}, "voice": {"enabled": False}, "providers": {"extensions": {"enabled": False}, "probe": {"enabled": True}, "clipboard": {"enabled": False}}}))
++    history = work / ".local/state/omarchy/clipboard-history.json"
++    history.parent.mkdir(parents=True)
++    history.write_text(json.dumps(["private sentinel"]))
++    probe = work / ".local/share/keystroke/extensions/probe"
++    probe.mkdir(parents=True)
++    (probe / "extension.json").write_text(json.dumps({"name": "Probe", "version": "1.0.0", "author": "Test", "description": "Guard probe", "apiVersion": 1}))
++    (probe / "Service.qml").write_text('''import QtQuick
++QtObject {
++  property var shell: null
++  property var extension: null
++  property string omarchyPath: ""
++  readonly property var provider: ({ apiVersion: 1, name: "Probe",
++    query: function(ctx) { return ctx.query === "guard" ? [{ id: "guard", title: "Guard", score: 1000, confirm: "Confirm guard?", confirmDetail: "Guard detail", confirmText: "Run guard", action: { type: "noop" } }] : [] },
++    activate: function(row, ctx) { ctx.host.statusMessage = "callback ran"; return { type: "noop" } }
++  })
++}
++''')
++    (work / "shell.qml").write_text('''import QtQuick
++import Quickshell
++import "project"
++import "project/providers"
++ShellRoot {
++  id: test
++  property int stage: 0
++  function check(ok, message) { if (!ok) { console.log("FAIL", message); Qt.quit(); throw Error(message) } }
++  function configure(master, probe, clipboard) {
++    palette.applyConfigText(JSON.stringify({ version: 1, matching: { mode: "off" }, voice: { enabled: false }, palette: { searchBarOnly: true }, providers: { extensions: { enabled: master }, probe: { enabled: probe }, clipboard: { enabled: clipboard } } }))
++  }
++  Keystroke { id: palette; omarchyPath: "/usr/share/omarchy" }
++  Clipboard { id: clipboard; host: palette }
++  Timer { interval: 150; repeat: true; running: true; onTriggered: {
++    switch (test.stage) {
++    case 0:
++      if (!palette.registry.manifests.probe) return
++      test.check(!palette.registry.services.probe, "master switch must block an enabled extension")
++      test.check(clipboard.entries.length === 0, "disabled clipboard must not read history")
++      test.configure(true, false, true)
++      test.stage = 1; return
++    case 1:
++      test.check(!palette.registry.services.probe, "individual switch must block an extension")
++      if (clipboard.entries.length !== 1) return
++      test.check(clipboard.entries[0].text === "private sentinel", "clipboard fixture must be readable when enabled")
++      test.configure(true, true, false)
++      test.stage = 2; return
++    case 2:
++      if (!palette.registry.services.probe || !palette.registry.services.probe.instance) return
++      test.check(clipboard.entries.length === 0, "disabling clipboard must clear loaded history")
++      palette.open('{"query":""}')
++      test.stage = 3; return
++    case 3:
++      var info = JSON.parse(palette.inspect())
++      test.check(info.searchOnly && !info.contentVisible && info.cardHeight === info.headerHeight, "empty palette must show only search")
++      palette.statusMessage = ""
++      palette.activate()
++      test.check(palette.statusMessage === "" && !palette.confirmPending, "empty search must never activate a hidden result")
++      palette.setQuery("guard")
++      test.stage = 4; return
++    case 4:
++      if (palette.pending || !palette.rows.length || palette.rows[0].title !== "Guard") return
++      test.check(!JSON.parse(palette.inspect()).searchOnly, "typed query must restore results")
++      palette.activate()
++      test.check(palette.confirmPending && palette.statusMessage !== "callback ran", "provider callback must wait for confirmation")
++      test.check(palette.confirmPending.detail === "Guard detail" && palette.confirmPending.confirmText === "Run guard", "confirmation metadata must survive the update")
++      palette.confirmPending = null
++      test.check(palette.statusMessage !== "callback ran", "canceling must not invoke callback")
++      palette.activate()
++      var run = palette.confirmPending.run
++      palette.confirmPending = null
++      run()
++      test.check(palette.statusMessage === "callback ran", "accepted confirmation must invoke callback")
++      test.configure(false, true, false)
++      test.stage = 5; return
++    case 5:
++      test.check(!palette.registry.services.probe, "turning master off must destroy loaded extension")
++      console.log("PASS local guards")
++      Qt.quit()
++    }
++  } }
++  Timer { interval: 9000; running: true; onTriggered: { console.log("FAIL timeout at stage " + test.stage); Qt.quit() } }
++}
++''')
++    env = dict(os.environ, HOME=str(work), XDG_RUNTIME_DIR=str(work), QT_QPA_PLATFORM="offscreen", QT_QPA_PLATFORMTHEME="generic", QT_QUICK_BACKEND="software", QML_IMPORT_PATH=str(work))
++    env.pop("DISPLAY", None)
++    env.pop("WAYLAND_DISPLAY", None)
++    result = subprocess.run(["quickshell", "-p", str(work / "shell.qml")], env=env, capture_output=True, text=True, timeout=15)
++    output = result.stdout + result.stderr
++    assert "PASS local guards" in output and "Error:" not in output and "ReferenceError" not in output and "FAIL" not in output, output
++    print("PASS: local privacy, confirmation and compact-menu guards")
