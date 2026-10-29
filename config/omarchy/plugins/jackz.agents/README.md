@@ -1,6 +1,14 @@
 # Agents
 
-One bar icon and one panel for every AI coding subscription on the machine.
+The bar shows Codex weekly allowance remaining and its reset countdown; clicking
+opens one panel for every AI coding subscription on the machine. The countdown
+keeps updating with the panel closed. When the reported reset passes, it says
+`refreshing` until the collector supplies a fresh limit instead of assuming the
+allowance has replenished. Unknown weekly limits and reset times are explicit.
+
+Weekly selection follows the collector's duration-derived labels, regardless of
+which app-server slot contains the seven-day window. `CodexBar.js` formats the
+bar; run `node tests/codex-bar.test.cjs` to check selection and countdown cases.
 The panel is strictly a display: it watches the usage records that
 `omarchy-agent-usage-update` writes to `~/.local/state/omarchy/agents/usage/`
 and draws whatever appears there. `Panel.qml` owns the bar button and the

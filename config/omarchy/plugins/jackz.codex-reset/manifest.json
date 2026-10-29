@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "jackz.codex-reset",
+  "name": "Tibo Reset Forecast",
+  "version": "1.0.0",
+  "author": "jackz",
+  "license": "MIT",
+  "description": "Potential Codex resets from codex-reset.com, separate from account limits.",
+  "kinds": ["bar-widget"],
+  "activation": "on-demand",
+  "entryPoints": {"barWidget": "Panel.qml"},
+  "barWidget": {
+    "displayName": "Tibo Reset Forecast",
+    "description": "Community forecast and explicit announcement deadlines. Click for sources.",
+    "category": "AI",
+    "allowMultiple": false,
+    "defaults": {}
+  }
+}

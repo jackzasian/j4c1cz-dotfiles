@@ -65,7 +65,11 @@
         },
         {
           "id": "jackz.agents",
-          "refreshIntervalSec": 60
+          "refreshIntervalSec": 60,
+          "menuOnly": false
+        },
+        {
+          "id": "jackz.codex-reset"
         },
         {
           "id": "omarchy.network"

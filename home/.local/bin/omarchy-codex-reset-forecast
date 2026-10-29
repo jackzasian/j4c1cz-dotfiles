@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+"""Personal Tibo reset watch. Data: https://codex-reset.com/developers.
+
+Public forecast/feed only; no account credentials. Inspired by the MIT project
+https://github.com/Chloride233/tibo-reset-watch. Odds are estimates, not timers.
+"""
+import datetime as dt
+import fcntl
+import json
+import math
+import os
+from pathlib import Path
+import tempfile
+import time
+import urllib.request
+
+SOURCE = "https://codex-reset.com/"
+INTERVAL = 300
+MAX_AGE = 1800
+
+
+def epoch(value):
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return parsed.timestamp() if parsed.tzinfo else None
+    except (ValueError, OverflowError):
+        return None
+
+
+def stamp(now):
+    return dt.datetime.fromtimestamp(now, dt.timezone.utc).isoformat()
+
+
+def percent(value):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return round(value) if math.isfinite(value) and 0 <= value <= 100 else None
+
+
+def canonical_url(value):
+    import re
+    return value if isinstance(value, str) and re.fullmatch(
+        r"https://(?:x\.com|twitter\.com)/thsottiaux/status/[0-9]+", value
+    ) else None
+
+
+def normalize(forecast, feed, now):
+    probabilities = forecast.get("probabilities") or {}
+    updated = forecast.get("updated_at")
+    fetched = feed.get("fetched_at")
+    result = {
+        "p24": percent(probabilities.get("rounded_24h")),
+        "p48": percent(probabilities.get("rounded_48h")),
+        "confidence": forecast.get("confidence") if forecast.get("confidence") in
+            ("low", "medium", "high") else "unknown",
+        "signal": None,
+        "lastResetAt": forecast.get("last_reset_at") if epoch(forecast.get("last_reset_at")) else None,
+        "sourceUrl": SOURCE,
+        "updatedAt": updated if epoch(updated) else None,
+        "fetchedAt": fetched if epoch(fetched) else None,
+        "checkedAt": stamp(now),
+        "stale": bool(feed.get("stale")),
+        "error": None,
+    }
+    if result["p24"] is None or result["p48"] is None:
+        raise ValueError("Forecast percentages unavailable")
+    signal = feed.get("signal")
+    if not (isinstance(signal, dict) and signal.get("active") is True):
+        official = forecast.get("official_signal")
+        signal = official if isinstance(official, dict) and official.get("active") is not False else None
+    if isinstance(signal, dict):
+        url = canonical_url(signal.get("url"))
+        if url:
+            deadline = None
+            # Accept explicit timestamps only. Never derive a deadline from odds
+            # or natural-language promises such as 'tomorrow'.
+            for key in ("deadline", "deadline_at", "ends_at", "end_at", "window_end"):
+                if epoch(signal.get(key)) is not None:
+                    deadline = signal[key]
+                    break
+            result["signal"] = {"active": True,
+                "summary": str(signal.get("summary") or "Reset signal")[:500],
+                "url": url, "deadline": deadline}
+    return freshness(result, now)
+
+
+def freshness(result, now):
+    for key in ("updatedAt", "fetchedAt"):
+        timestamp = epoch(result.get(key))
+        if timestamp is None or now - timestamp > MAX_AGE or timestamp > now + 300:
+            result["stale"] = True
+    return result
+
+
+def fetch(route):
+    req = urllib.request.Request(SOURCE + "api/" + route, headers={
+        "User-Agent": "jackz-omarchy-codex-reset/1.0 (+https://github.com/jackzasian)",
+        "Accept": "application/json",
+    })
+    with urllib.request.urlopen(req, timeout=7) as response:
+        raw = response.read(2_000_001)
+    if len(raw) > 2_000_000:
+        raise ValueError("Reset feed too large")
+    value = json.loads(raw)
+    if not isinstance(value, dict):
+        raise ValueError("Unexpected reset feed")
+    return value
+
+
+def collect(cache, now):
+    try:
+        previous = json.loads(cache.read_text())
+        if not isinstance(previous, dict):
+            previous = {}
+    except (OSError, ValueError):
+        previous = {}
+    checked = epoch(previous.get("checkedAt"))
+    if checked is not None and 0 <= now - checked < INTERVAL:
+        return freshness(previous, now)
+    try:
+        result = normalize(fetch("forecast"), fetch("feed"), now)
+    except (OSError, ValueError, TypeError, AttributeError) as error:
+        result = previous or {"p24": None, "p48": None, "confidence": "unknown",
+            "signal": None, "lastResetAt": None, "updatedAt": None,
+            "fetchedAt": None, "sourceUrl": SOURCE}
+        result.update(stale=True, error=f"Reset source unavailable ({type(error).__name__})",
+            checkedAt=stamp(now))
+    with tempfile.NamedTemporaryFile(mode="w", dir=cache.parent, delete=False) as out:
+        temporary = Path(out.name)
+        try:
+            json.dump(result, out, ensure_ascii=False)
+            out.flush()
+            os.fsync(out.fileno())
+            os.replace(temporary, cache)
+        finally:
+            temporary.unlink(missing_ok=True)
+    return result
+
+
+def main():
+    cache = Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "omarchy/codex-reset-forecast.json"
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    with cache.with_suffix(".lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        result = collect(cache, time.time())
+    print(json.dumps(result, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()

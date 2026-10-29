@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 import qs.Ui
+import "CodexBar.js" as CodexBar
 
 // Forked from omarchy.agents 2026-09-05 to stop paging between subscriptions:
 // every enabled agent with data renders on one scrollable page instead of
@@ -16,6 +17,9 @@ import qs.Ui
 // the Codex rate-limit fix this shipped alongside).
 Panel {
   id: root
+  readonly property bool menuOnly: setting("menuOnly", false) === true
+  readonly property real openPanelIndicatorWidth: root.menuOnly ? 0.4 : 0
+  readonly property real openPanelIndicatorHeight: root.menuOnly ? 0.4 : 0
   ipcTarget: "omarchy.agents"
   manageIpc: false
 
@@ -27,6 +31,7 @@ Panel {
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
 
   readonly property var providers: usage.enabledProviders
+  readonly property var codexWeekly: CodexBar.weeklyLimit(providers)
 
   // Countdowns and "updated" read this instead of Date.now() so the
   // panel keeps telling the truth while it sits open.
@@ -346,8 +351,8 @@ Panel {
   // item is invisible, so the icon appears the moment the first scan finds
   // usage and stays away entirely on a machine that has never run either CLI.
   visible: providers.length > 0
-  implicitWidth: button.implicitWidth
-  implicitHeight: button.implicitHeight
+  implicitWidth: root.menuOnly ? 0 : button.implicitWidth
+  implicitHeight: root.menuOnly ? 0 : button.implicitHeight
 
   onOpenedChanged: if (opened) {
     nowMs = Date.now()
@@ -365,7 +370,7 @@ Panel {
   // stale "resets in 2h" on a panel that is open is worse than a timer.
   Timer {
     interval: 30000
-    running: root.opened
+    running: root.opened || !root.menuOnly
     repeat: true
     onTriggered: root.nowMs = Date.now()
   }
@@ -384,12 +389,16 @@ Panel {
     function next(): string { root.open(); return "ok" }
   }
 
-  BarIconButton {
+  WidgetButton {
     id: button
+    visible: !root.menuOnly
     anchors.fill: parent
     bar: root.bar
-    text: "󱚣"
-    active: root.alarming
+    text: CodexBar.label(root.codexWeekly, root.nowMs)
+    tooltipText: root.codexWeekly
+      ? "Codex weekly allowance remaining · resets " + root.codexWeekly.resetsAt
+      : "Codex weekly limit unavailable · click to inspect usage"
+    active: root.codexWeekly !== null && root.codexWeekly.percent >= 0.9
     onPressed: function(buttonCode) {
       if (buttonCode === Qt.RightButton) root.launchAgent()
       else root.toggle()
