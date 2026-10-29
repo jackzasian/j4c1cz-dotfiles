@@ -1,0 +1,12 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const context = {};
+vm.createContext(context);
+vm.runInContext(fs.readFileSync(`${__dirname}/Countdown.js`, 'utf8'), context);
+assert.equal(context.format(NaN, 0), '');
+assert.equal(context.format(0, 0), 'awaiting');
+assert.equal(context.format(-60000, 0), 'awaiting');
+assert.equal(context.format(30 * 60000, 0), '30m');
+assert.equal(context.format(61 * 60000, 0), '1h 1m');
+assert.equal(context.format(25 * 3600000, 0), '1d 1h');

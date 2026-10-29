@@ -1,6 +1,7 @@
 # Agents
 
-The bar shows Codex weekly allowance remaining and its reset countdown; clicking
+The compact bar shows weekly allowance remaining and its reset countdown
+(e.g. `78% · 6d 4h`); the tooltip identifies Codex. Clicking
 opens one panel for every AI coding subscription on the machine. The countdown
 keeps updating with the panel closed. When the reported reset passes, it says
 `refreshing` until the collector supplies a fresh limit instead of assuming the

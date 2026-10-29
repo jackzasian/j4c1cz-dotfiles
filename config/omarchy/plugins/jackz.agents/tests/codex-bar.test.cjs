@@ -12,9 +12,9 @@ for (const limits of [[weekly, {label: "5h window", percent: .9}], [{label: "5h 
 assert.equal(bar.weeklyLimit([{providerId: "claude", limits: [weekly]}]), null);
 assert.equal(bar.weeklyLimit([{providerId: "codex", limits: [{label: "Weekly (7-day)", percent: NaN}]}]), null);
 assert.equal(bar.weeklyLimit([{providerId: "codex", usageStatusText: "Codex limits unavailable", limits: [weekly]}]), null);
-assert.equal(bar.label(weekly, now), "Codex W 42% left · 3d 2h");
-assert.equal(bar.label(weekly, Date.parse(weekly.resetsAt)), "Codex W 42% left · refreshing");
-assert.equal(bar.label({...weekly, resetsAt: "bad"}, now), "Codex W 42% left · reset unknown");
-assert.equal(bar.label({...weekly, percent: 1.01}, now), "Codex W 0% left · 3d 2h");
-assert.equal(bar.label(null, now), "Codex W —");
+assert.equal(bar.label(weekly, now), "42% · 3d 2h");
+assert.equal(bar.label(weekly, Date.parse(weekly.resetsAt)), "42% · refreshing");
+assert.equal(bar.label({...weekly, resetsAt: "bad"}, now), "42% · reset unknown");
+assert.equal(bar.label({...weekly, percent: 1.01}, now), "0% · 3d 2h");
+assert.equal(bar.label(null, now), "—");
 console.log("Codex bar selection/countdown checks passed");

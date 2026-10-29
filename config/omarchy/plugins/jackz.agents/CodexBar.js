@@ -15,7 +15,7 @@ function weeklyLimit(providers) {
 }
 
 function label(limit, nowMs) {
-  if (!limit) return "Codex W —"
+  if (!limit) return "—"
   var left = Math.round(Math.max(0, Math.min(1, 1 - limit.percent)) * 100)
   var resetMs = Date.parse(limit.resetsAt || "")
   var reset = "reset unknown"
@@ -26,5 +26,5 @@ function label(limit, nowMs) {
     reset = resetMs <= nowMs ? "refreshing" : days > 0 ? days + "d " + hours % 24 + "h"
       : hours > 0 ? hours + "h " + minutes % 60 + "m" : minutes + "m"
   }
-  return "Codex W " + left + "% left · " + reset
+  return left + "% · " + reset
 }
