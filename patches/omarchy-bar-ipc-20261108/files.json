@@ -1,0 +1,126 @@
+[
+  {
+    "path": "bar/ipc/qmldir",
+    "sha256_before": null
+  },
+  {
+    "path": "bar/ipc/IpcLease.qml",
+    "sha256_before": null
+  },
+  {
+    "path": "bar/ipc/OwnedIpcHandler.qml",
+    "sha256_before": null
+  },
+  {
+    "path": "bar/ipc/Registry.qml",
+    "sha256_before": null
+  },
+  {
+    "path": "plugins/agx.screen-time/qml/BarWidget.qml",
+    "sha256_before": "a11abafa0e4064618b30c9a9062bafbee4e8af69b10014a9ae47d187fc4cf26d"
+  },
+  {
+    "path": "plugins/crmne.omacal/BarWidget.qml",
+    "sha256_before": "44f1214b3c6b1de916b426801aa684da7a452a4f7bfd8cb2b59d131ee699d296"
+  },
+  {
+    "path": "plugins/io.github.mnsosa.backup-history/BarWidget.qml",
+    "sha256_before": "2f0aed52be2981ea915f83c32bf99d3f88c2f25baf4fff6ee5466d422df61071"
+  },
+  {
+    "path": "plugins/omaconnect/BarWidget.qml",
+    "sha256_before": "d304ccd4b915dacfdb0478de3b1f81e63f4bcf2a9b350794caabe79bf25b858a"
+  },
+  {
+    "path": "plugins/omaplug/BarWidget.qml",
+    "sha256_before": "d5045d24b09dbec64e2c074329f854e7568127f3730013b72cc5a9655c41bf4c"
+  },
+  {
+    "path": "plugins/jackz.agents/Panel.qml",
+    "sha256_before": "de011ba77123fe943501dc29fdb766a8bf572ef9c30bfd12abe88eebc9b8dba5"
+  },
+  {
+    "path": "plugins/jackz.bluetooth/Panel.qml",
+    "sha256_before": "c619457151c683e6706a8fab072d85e2a80f24aba878ca6c424c5cd7ee7f1999"
+  },
+  {
+    "path": "plugins/jackz.monitor/Panel.qml",
+    "sha256_before": "01785de6841b53be7e724a1307199e26a9450e545cc509fe9246701f44e294d0"
+  },
+  {
+    "path": "plugins/jackz.network/Panel.qml",
+    "sha256_before": "13e17895136bfeb993358dd8c643dfd849095c16630fdb31f83c24827225a282"
+  },
+  {
+    "path": "plugins/jackz.power/Panel.qml",
+    "sha256_before": "76484babc9267b6bcd10d72bb5d07d973f95237b8dfe717e6fa8324d57619527"
+  },
+  {
+    "path": "plugins/jackz.tailscale/Panel.qml",
+    "sha256_before": "8886e02629867851cca94fe3d1f29842bb677b71f53a3280bfd0a39ab7a069a5"
+  },
+  {
+    "path": "plugins/jackz.weather/Panel.qml",
+    "sha256_before": "3a5b1345741f699e426ac08a2e4548a8bc0e0c4c82a54600402f716c20736de5"
+  },
+  {
+    "path": "plugins/robzolkos.github/Panel.qml",
+    "sha256_before": "552ec1a17edebaf44581cc67264755a122fee2f5b81412f7827b7e43b037e861"
+  },
+  {
+    "path": "plugins/djjeane.docker-monitor/Panel.qml",
+    "sha256_before": "ae8806558694fe578bde737300853940ac580227f881e61295b2e26ee4148a8a"
+  },
+  {
+    "path": "plugins/doghouse-mike.omatasknotes/Panel.qml",
+    "sha256_before": "ab648b8f02749d1eff196e271799564a16f3ab24058aa5a6523d9e5300899cc2"
+  },
+  {
+    "path": "plugins/io.github.ilyazar.syncthing/hosts/omarchy/OmarchyPanel.qml",
+    "sha256_before": "189aec4e63b841d8ef468ee6a98b7f4f98f89f8711b34fc16b6086032d1f7c52"
+  },
+  {
+    "path": "plugins/jankeesvw.notification-center/Panel.qml",
+    "sha256_before": "23976d0368b182c8229fd545d3c79720160e7cf3fb9d8ace2ef9de4919e74034"
+  },
+  {
+    "path": "plugins/bt.codecs/Panel.qml",
+    "sha256_before": "71dbf16e901a4a23fb1aed4db52a349e598b2766f4c552c77bcaeffaf3c445bd"
+  },
+  {
+    "path": "plugins/jackzasian.eq/plugin/Panel.qml",
+    "sha256_before": "2b9b9d8500f04f89c543adfede3fb73ee607fb636d82d19f1cb95bf9a10ed690"
+  },
+  {
+    "path": "plugins/jackz.audio/Panel.qml",
+    "sha256_before": "78eeadb25d80b37c6ad9b53e293814aa784cc1a7d3cf98a32b6efc84cc8ac194"
+  },
+  {
+    "path": "plugins/stappmus.activity-monitor/Panel.qml",
+    "sha256_before": "b91b3f440832c5a3382fe5a84755f8513634c95e9f184a65eba395db0d7d5ece"
+  },
+  {
+    "path": "plugins/jackz.indicators/Indicators.qml",
+    "sha256_before": null
+  },
+  {
+    "path": "plugins/jackz.indicators/manifest.json",
+    "sha256_before": null
+  },
+  {
+    "path": "plugins/jackz.system-update/SystemUpdate.qml",
+    "sha256_before": null
+  },
+  {
+    "path": "plugins/jackz.system-update/manifest.json",
+    "sha256_before": null
+  },
+  {
+    "path": "bar/modules/desktop-tools.qml",
+    "sha256_before": null
+  },
+  {
+    "path": "shell.json",
+    "sha256_before": "81338e2980756533d18785e308ac42a8b7870974d0dc6dc9111e129f0f8ba23d"
+  }
+]

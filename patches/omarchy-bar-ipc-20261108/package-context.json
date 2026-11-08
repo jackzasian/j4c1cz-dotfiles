@@ -1,0 +1,9 @@
+{
+  "/usr/share/omarchy/shell/plugins/bar/Bar.qml": "a8f27b3d8f29f8b8c14a5e578ad0617e6035375ccab0178a28c435e80a2822f0",
+  "/usr/share/omarchy/shell/Ui/Panel.qml": "c5c9fff24d3fd294efc23aff8000c39542228d481837f79d2b5f82af7f1ed1ae",
+  "/usr/share/omarchy/shell/Ui/WidgetButton.qml": "576f2ade5c9e746131d63ae88f1bbc12cd71081764cecff43d3e36afcad354ac",
+  "/usr/share/omarchy/shell/Ui/BarWidget.qml": "8be00e2553a486b3dbfcb4f99de976035f323c4061b993dbc1842c75ff8b9022",
+  "/usr/share/omarchy/shell/shell.qml": "1c390bb1703a8372a7d3a614bc44513b6cc91eee21f4bd507198e8601310e617",
+  "/usr/share/omarchy/shell/plugins/bar/widgets/Indicators.qml": "36e3f0a49e62738551786bc2e82d47d0f3650f9a593f6c651d8f839d1eebdea4",
+  "/usr/share/omarchy/shell/plugins/bar/widgets/SystemUpdate.qml": "d615dbfb9c9cfd1557f98db1e78a812ba81847209ca87b98dc1f6539aa8fb3de"
+}

@@ -1,0 +1,1122 @@
+--- before/bar/ipc/qmldir
++++ after/bar/ipc/qmldir
+@@ -0,0 +1,3 @@
++singleton Registry 1.0 Registry.qml
++IpcLease 1.0 IpcLease.qml
++OwnedIpcHandler 1.0 OwnedIpcHandler.qml
+--- before/bar/ipc/IpcLease.qml
++++ after/bar/ipc/IpcLease.qml
+@@ -0,0 +1,10 @@
++import QtQml
++import "."
++
++QtObject {
++  id: root
++  property string target: ""
++  readonly property bool selected: Registry.owner(target) === root
++  Component.onCompleted: Registry.add(root)
++  Component.onDestruction: Registry.remove(root)
++}
+--- before/bar/ipc/OwnedIpcHandler.qml
++++ after/bar/ipc/OwnedIpcHandler.qml
+@@ -0,0 +1,10 @@
++import QtQml
++import Quickshell.Io
++import "."
++
++IpcHandler {
++  id: root
++  enabled: Registry.owner(target) === root
++  Component.onCompleted: Registry.add(root)
++  Component.onDestruction: Registry.remove(root)
++}
+--- before/bar/ipc/Registry.qml
++++ after/bar/ipc/Registry.qml
+@@ -0,0 +1,15 @@
++pragma Singleton
++import QtQml
++
++QtObject {
++  property var leases: []
++  function add(lease) { leases = leases.concat([lease]) }
++  function remove(lease) { leases = leases.filter(function(item) { return item !== lease }) }
++  function owner(target) {
++    if (!target) return null
++    for (var i = 0; i < leases.length; i++) {
++      if (leases[i].target === target) return leases[i]
++    }
++    return null
++  }
++}
+--- before/plugins/agx.screen-time/qml/BarWidget.qml
++++ after/plugins/agx.screen-time/qml/BarWidget.qml
+@@ -1,3 +1,4 @@
++import "../../../bar/ipc" as LocalIpc
+ import QtQuick
+ import Quickshell.Io
+ import qs.Ui
+@@ -178,7 +179,7 @@
+         }
+     }
+ 
+-    IpcHandler {
++    LocalIpc.OwnedIpcHandler {
+         target: "agx.screen-time"
+         function open(): void {
+             root.open();
+--- before/plugins/crmne.omacal/BarWidget.qml
++++ after/plugins/crmne.omacal/BarWidget.qml
+@@ -1,3 +1,4 @@
++import "../../bar/ipc" as LocalIpc
+ import QtQuick
+ import Quickshell
+ import Quickshell.Io
+@@ -678,7 +679,7 @@
+     }
+   }
+ 
+-  IpcHandler {
++  LocalIpc.OwnedIpcHandler {
+     target: "crmne.omacal"
+ 
+     function refresh(): void { root.refresh() }
+--- before/plugins/io.github.mnsosa.backup-history/BarWidget.qml
++++ after/plugins/io.github.mnsosa.backup-history/BarWidget.qml
+@@ -1,3 +1,4 @@
++import "../../bar/ipc" as LocalIpc
+ import QtQuick
+ import QtQuick.Effects
+ import Quickshell
+@@ -65,7 +66,7 @@
+     }
+   }
+ 
+-  IpcHandler {
++  LocalIpc.OwnedIpcHandler {
+     target: "io.github.mnsosa.backup-history"
+ 
+     function open(): void { root.open() }
+--- before/plugins/omaconnect/BarWidget.qml
++++ after/plugins/omaconnect/BarWidget.qml
+@@ -1,3 +1,4 @@
++import "../../bar/ipc" as LocalIpc
+ pragma ComponentBehavior: Bound
+ import QtQuick
+ import QtQuick.Controls
+@@ -92,7 +93,7 @@
+         }
+     }
+ 
+-    IpcHandler {
++    LocalIpc.OwnedIpcHandler {
+         target: "omaconnect"
+ 
+         function open(): void { root.open() }
+--- before/plugins/omaplug/BarWidget.qml
++++ after/plugins/omaplug/BarWidget.qml
+@@ -1,3 +1,4 @@
++import "../../bar/ipc" as LocalIpc
+ import QtQuick
+ import Quickshell.Io
+ import qs.Commons
+@@ -55,7 +56,7 @@
+         }
+     }
+ 
+-    IpcHandler {
++    LocalIpc.OwnedIpcHandler {
+         target: "omaplug"
+ 
+         function refresh(): void { root.broadcast("refresh") }
+--- before/plugins/jackz.agents/Panel.qml
++++ after/plugins/jackz.agents/Panel.qml
+@@ -1,3 +1,4 @@
++import "../../bar/ipc" as LocalIpc
+ import QtQuick
+ import QtQuick.Controls
+ import Quickshell
+@@ -375,7 +376,7 @@
+     onTriggered: root.nowMs = Date.now()
+   }
+ 
+-  IpcHandler {
++  LocalIpc.OwnedIpcHandler {
+     target: root.ipcTarget
+     function open(): void { root.open() }
+     function close(): void { root.close() }
+--- before/plugins/jackz.bluetooth/Panel.qml
++++ after/plugins/jackz.bluetooth/Panel.qml
+@@ -1,3 +1,4 @@
++import "../../bar/ipc" as LocalIpc
+ import QtQuick
+ import QtQuick.Controls
+ import Quickshell
+@@ -649,7 +650,7 @@
+     Quickshell.execDetached(["omarchy-bluetooth-power", adapter.enabled ? "off" : "on"])
+   }
+ 
+-  IpcHandler {
++  LocalIpc.OwnedIpcHandler {
+     target: "omarchy.bluetooth"
+ 
+     function open() { root.open() }
+--- before/plugins/jackz.monitor/Panel.qml
++++ after/plugins/jackz.monitor/Panel.qml
+@@ -1,3 +1,4 @@
++import "../../bar/ipc" as LocalIpc
+ import QtQuick
+ import QtQuick.Controls
+ import Quickshell
+@@ -219,7 +220,7 @@
+     })
+   }
+ 
+-  IpcHandler {
++  LocalIpc.OwnedIpcHandler {
+     target: "omarchy.monitor"
+ 
+     function brightness(percent: string): string { return root.brightnessIpc(percent) }
+--- before/plugins/jackz.network/Panel.qml
++++ after/plugins/jackz.network/Panel.qml
+@@ -1,3 +1,4 @@
++import "../../bar/ipc" as LocalIpc
+ import QtQuick
+ import QtQuick.Controls
+ import QtQuick.Layouts
+@@ -216,7 +217,7 @@
+     Qt.callLater(function() { root.refresh(true) })
+   }
+ 
+-  IpcHandler {
++  LocalIpc.OwnedIpcHandler {
+     target: "omarchy.network"
+ 
+     function open() { root.open() }
+--- before/plugins/jackz.power/Panel.qml
++++ after/plugins/jackz.power/Panel.qml
+@@ -1,3 +1,4 @@
++import "../../bar/ipc" as LocalIpc
+ import QtQuick
+ import Quickshell
+ import Quickshell.Io
+@@ -183,7 +184,7 @@
+     if (root.bar && root.bar.shell) root.bar.shell.updateEntryInline(root.moduleName, root.settings)
+   }
+ 
+-  IpcHandler {
++  LocalIpc.OwnedIpcHandler {
+     target: "omarchy.power"
+ 
+     function open() { root.open() }
+--- before/plugins/jackz.tailscale/Panel.qml
++++ after/plugins/jackz.tailscale/Panel.qml
+@@ -1,3 +1,4 @@
++import "../../bar/ipc" as LocalIpc
+ import QtQuick
+ import QtQuick.Controls
+ import QtQuick.Layouts
+@@ -365,7 +366,7 @@
+     function onAccountsAccessDeniedChanged() { root.ensureCursor() }
+   }
+ 
+-  IpcHandler {
++  LocalIpc.OwnedIpcHandler {
+     target: root.ipcTarget
+     function open(): void { root.open() }
+     function close(): void { root.close() }
+--- before/plugins/jackz.weather/Panel.qml
++++ after/plugins/jackz.weather/Panel.qml
+@@ -1,3 +1,4 @@
++import "../../bar/ipc" as LocalIpc
+ import QtQuick
+ import Quickshell
+ import Quickshell.Io
+@@ -476,7 +477,7 @@
+     onTriggered: root.refresh()
+   }
+ 
+-  IpcHandler {
++  LocalIpc.OwnedIpcHandler {
+     target: root.ipcTarget
+ 
+     function open(): void { root.openFromHotkey() }
+--- before/plugins/robzolkos.github/Panel.qml
++++ after/plugins/robzolkos.github/Panel.qml
+@@ -1,3 +1,4 @@
++import "../../bar/ipc" as LocalIpc
+ import QtQuick
+ import QtQuick.Controls
+ import QtQuick.Layouts
+@@ -307,7 +308,7 @@
+     onWebAppLaunchRequested: function(argv) { Quickshell.execDetached(argv) }
+   }
+ 
+-  IpcHandler {
++  LocalIpc.OwnedIpcHandler {
+     target: root.ipcTarget
+     function open(): void { root.open() }
+     function close(): void { root.close() }
+--- before/plugins/djjeane.docker-monitor/Panel.qml
++++ after/plugins/djjeane.docker-monitor/Panel.qml
+@@ -1,3 +1,4 @@
++import "../../bar/ipc" as LocalIpc
+ import QtQuick
+ import QtQuick.Controls
+ import QtQuick.Layouts
+@@ -9,6 +10,8 @@
+ 
+ Panel {
+   id: root
++  manageIpc: ipcLease.selected
++  LocalIpc.IpcLease { id: ipcLease; target: root.ipcTarget }
+   readonly property bool menuOnly: setting("menuOnly", false) === true
+   readonly property real openPanelIndicatorWidth: root.menuOnly ? 0.4 : 0
+   readonly property real openPanelIndicatorHeight: root.menuOnly ? 0.4 : 0
+--- before/plugins/doghouse-mike.omatasknotes/Panel.qml
++++ after/plugins/doghouse-mike.omatasknotes/Panel.qml
+@@ -1,3 +1,4 @@
++import "../../bar/ipc" as LocalIpc
+ import QtQuick
+ import QtQuick.Controls
+ import Quickshell
+@@ -15,6 +16,8 @@
+ // bin/omatasknotes; this file only decides what to show.
+ Panel {
+   id: root
++  manageIpc: ipcLease.selected
++  LocalIpc.IpcLease { id: ipcLease; target: root.ipcTarget }
+   moduleName: "doghouse-mike.omatasknotes"
+   ipcTarget: "doghouse-mike.omatasknotes"
+ 
+--- before/plugins/io.github.ilyazar.syncthing/hosts/omarchy/OmarchyPanel.qml
++++ after/plugins/io.github.ilyazar.syncthing/hosts/omarchy/OmarchyPanel.qml
+@@ -1,3 +1,4 @@
++import "../../../../bar/ipc" as LocalIpc
+ pragma ComponentBehavior: Bound
+ 
+ import QtQuick
+@@ -14,6 +15,8 @@
+ 
+ Panel {
+     id: root
++  manageIpc: ipcLease.selected
++  LocalIpc.IpcLease { id: ipcLease; target: root.ipcTarget }
+ 
+     readonly property bool menuOnly: setting("menuOnly", false) === true
+     readonly property real openPanelIndicatorWidth: root.menuOnly ? 0.4 : 0
+--- before/plugins/jankeesvw.notification-center/Panel.qml
++++ after/plugins/jankeesvw.notification-center/Panel.qml
+@@ -1,3 +1,4 @@
++import "../../bar/ipc" as LocalIpc
+ import QtQuick
+ import QtQuick.Controls
+ import Quickshell
+@@ -31,6 +32,8 @@
+ // editors and patches that mangle private-use codepoints.
+ Panel {
+   id: root
++  manageIpc: ipcLease.selected
++  LocalIpc.IpcLease { id: ipcLease; target: root.ipcTarget }
+ 
+   moduleName: "jankeesvw.notification-center"
+   ipcTarget: "jankeesvw.notification-center"
+--- before/plugins/bt.codecs/Panel.qml
++++ after/plugins/bt.codecs/Panel.qml
+@@ -1,3 +1,4 @@
++import "../../bar/ipc" as LocalIpc
+ import QtQuick
+ import QtQuick.Controls
+ import Quickshell
+@@ -8,6 +9,8 @@
+ 
+ Panel {
+   id: root
++  manageIpc: ipcLease.selected
++  LocalIpc.IpcLease { id: ipcLease; target: root.ipcTarget }
+   readonly property bool menuOnly: setting("menuOnly", false) === true
+   readonly property real openPanelIndicatorWidth: root.menuOnly ? 0.4 : 0
+   readonly property real openPanelIndicatorHeight: root.menuOnly ? 0.4 : 0
+--- before/plugins/jackzasian.eq/plugin/Panel.qml
++++ after/plugins/jackzasian.eq/plugin/Panel.qml
+@@ -1,3 +1,4 @@
++import "../../../bar/ipc" as LocalIpc
+ import QtQuick
+ import QtQuick.Controls
+ import Quickshell
+@@ -14,6 +15,8 @@
+ // and renders that. Plugging in headphones changes the contents of this popup.
+ Panel {
+   id: root
++  manageIpc: ipcLease.selected
++  LocalIpc.IpcLease { id: ipcLease; target: root.ipcTarget }
+   readonly property bool menuOnly: setting("menuOnly", false) === true
+   readonly property real openPanelIndicatorWidth: root.menuOnly ? 0.4 : 0
+   readonly property real openPanelIndicatorHeight: root.menuOnly ? 0.4 : 0
+--- before/plugins/jackz.audio/Panel.qml
++++ after/plugins/jackz.audio/Panel.qml
+@@ -1,3 +1,4 @@
++import "../../bar/ipc" as LocalIpc
+ import QtQuick
+ import QtQuick.Controls
+ import Quickshell
+@@ -11,6 +12,8 @@
+ 
+ Panel {
+   id: root
++  manageIpc: ipcLease.selected
++  LocalIpc.IpcLease { id: ipcLease; target: root.ipcTarget }
+   moduleName: "omarchy.audio"
+   ipcTarget: "omarchy.audio"
+ 
+--- before/plugins/stappmus.activity-monitor/Panel.qml
++++ after/plugins/stappmus.activity-monitor/Panel.qml
+@@ -1,3 +1,4 @@
++import "../../bar/ipc" as LocalIpc
+ import QtQuick
+ import QtQuick.Controls
+ import qs.Commons
+@@ -6,6 +7,8 @@
+ 
+ Panel {
+   id: root
++  manageIpc: ipcLease.selected
++  LocalIpc.IpcLease { id: ipcLease; target: root.ipcTarget }
+ 
+   readonly property bool menuOnly: setting("menuOnly", false) === true
+   readonly property real openPanelIndicatorWidth: root.menuOnly ? 0.4 : 0
+--- before/plugins/jackz.indicators/Indicators.qml
++++ after/plugins/jackz.indicators/Indicators.qml
+@@ -0,0 +1,500 @@
++import "../../bar/ipc" as LocalIpc
++import QtQuick
++import Quickshell
++import Quickshell.Io
++import qs.Commons
++import qs.Ui
++
++BarWidget {
++  id: root
++  moduleName: "omarchy.indicators"
++
++  readonly property var defaultIndicatorEntries: [ "Dictation", "ScreenRecording", "Reminder", "NightLight", "Dnd", "StayAwake" ]
++  readonly property var indicatorEntries: indicatorEntriesFromSettings(settings)
++  property var activeIndicatorIds: []
++  property var indicatorActiveStates: ({})
++  property bool indicatorAreaHovered: false
++  property bool indicatorItemHovered: false
++  readonly property bool alwaysShowIndicators: setting("alwaysShow", false) === true
++  readonly property bool revealInactiveIndicators: alwaysShowIndicators || indicatorAreaHovered || indicatorItemHovered || (bar && bar.centerSectionRevealHeld === true && bar.centerHoverRevealSuppressed !== true)
++
++  signal refreshRequested()
++
++  ListModel { id: activeIndicatorModel }
++
++  function entryId(entry) {
++    if (typeof entry === "string") return entry
++    if (Util.isPlainObject(entry)) {
++      var id = entry["id"]
++      if (id !== undefined && id !== null && String(id) !== "") return String(id)
++    }
++    return ""
++  }
++
++  function entrySettings(entry) {
++    if (!Util.isPlainObject(entry)) return {}
++    var copy = {}
++    for (var key in entry) {
++      if (key === "id") continue
++      copy[key] = entry[key]
++    }
++    return copy
++  }
++
++  function indicatorEntriesFromSettings(settings) {
++    var source = defaultIndicatorEntries
++    if (settings.items && typeof settings.items.length === "number" && settings.items.length > 0) source = settings.items
++    else if (settings.indicators && typeof settings.indicators.length === "number" && settings.indicators.length > 0) source = settings.indicators
++
++    var result = []
++    for (var i = 0; i < source.length; i++) {
++      var item = source[i]
++      if (typeof item !== "string" && item !== null && typeof item === "object") {
++        try {
++          item = JSON.parse(JSON.stringify(item))
++        } catch (error) {
++        }
++      }
++      var id = entryId(item)
++      if (id !== "") result.push(item)
++    }
++    return result
++  }
++
++  function setIndicatorAreaHovered(hovered) {
++    indicatorAreaHovered = hovered
++    if (hovered) indicatorHideTimer.stop()
++    else indicatorHideTimer.restart()
++  }
++
++  function setIndicatorItemHovered(hovered) {
++    if (hovered) {
++      indicatorItemHovered = true
++      indicatorHideTimer.stop()
++    } else {
++      indicatorHideTimer.restart()
++    }
++  }
++
++  function hasIndicatorId(id) {
++    for (var i = 0; i < indicatorEntries.length; i++) {
++      if (entryId(indicatorEntries[i]) === id) return true
++    }
++    return false
++  }
++
++  function entryForId(id) {
++    for (var i = 0; i < indicatorEntries.length; i++) {
++      var entry = indicatorEntries[i]
++      if (entryId(entry) === id) return entry
++    }
++
++    return { id: id }
++  }
++
++  function activeModelIndex(id) {
++    for (var i = 0; i < activeIndicatorModel.count; i++) {
++      if (activeIndicatorModel.get(i).activeId === id) return i
++    }
++    return -1
++  }
++
++  function copyActiveStates() {
++    var states = {}
++    for (var id in indicatorActiveStates) {
++      if (indicatorActiveStates[id] === true) states[id] = true
++    }
++    return states
++  }
++
++  function orderedActiveIds(states, preferredOrder) {
++    var ids = []
++
++    for (var i = 0; i < preferredOrder.length; i++) {
++      var id = preferredOrder[i]
++      if (ids.indexOf(id) === -1 && hasIndicatorId(id) && states[id] === true) ids.push(id)
++    }
++
++    return ids
++  }
++
++  function syncActiveIndicatorModel() {
++    for (var i = activeIndicatorModel.count - 1; i >= 0; i--) {
++      if (activeIndicatorIds.indexOf(activeIndicatorModel.get(i).activeId) === -1)
++        activeIndicatorModel.remove(i)
++    }
++
++    for (var j = 0; j < activeIndicatorIds.length; j++) {
++      var id = activeIndicatorIds[j]
++      var index = activeModelIndex(id)
++      if (index === -1) activeIndicatorModel.insert(j, { activeId: id })
++      else if (index !== j) activeIndicatorModel.move(index, j, 1)
++    }
++  }
++
++  function setIndicatorActive(entry, active) {
++    var id = entryId(entry)
++    if (id === "") return
++
++    var states = copyActiveStates()
++    if (active) states[id] = true
++    else delete states[id]
++
++    indicatorActiveStates = states
++
++    var ids = orderedActiveIds(states, activeIndicatorIds)
++    // The active block sits closest to the clock, so newcomers go on the far
++    // side of it. Appending would shove everything already showing sideways.
++    if (active && ids.indexOf(id) === -1 && hasIndicatorId(id)) ids.unshift(id)
++    activeIndicatorIds = ids
++    syncActiveIndicatorModel()
++  }
++
++  function syncActiveIndicatorOrder() {
++    activeIndicatorIds = orderedActiveIds(indicatorActiveStates, activeIndicatorIds)
++    syncActiveIndicatorModel()
++  }
++
++  function refresh() { root.refreshRequested() }
++
++  onIndicatorEntriesChanged: syncActiveIndicatorOrder()
++
++  // Only the tree for the current orientation exists (see orientationLoader
++  // below); its wrapper keeps the stock sizing expressions, so the root's
++  // implicit size still follows the blocks synchronously rather than waiting
++  // on a positioner's polish.
++  implicitWidth: orientationLoader.item ? orientationLoader.item.implicitWidth : 0
++  implicitHeight: orientationLoader.item ? orientationLoader.item.implicitHeight : 0
++
++  LocalIpc.OwnedIpcHandler {
++    target: "omarchy.indicators"
++
++    function refresh(): void {
++      root.broadcast("refresh")
++    }
++  }
++
++  Timer {
++    id: indicatorHideTimer
++    interval: 120
++    onTriggered: {
++      if (!root.indicatorAreaHovered)
++        root.indicatorItemHovered = false
++    }
++  }
++
++  Component.onCompleted: root.refreshRequested()
++
++  // Instantiating both orientation trees and toggling `visible` doubled every
++  // indicator per bar (and every process an indicator spawns, once per
++  // monitor). Load only the tree that matches the bar orientation instead.
++  Loader {
++    id: orientationLoader
++    sourceComponent: root.vertical ? verticalIndicatorsTree : horizontalIndicatorsTree
++  }
++
++  Component {
++    id: horizontalIndicatorsTree
++
++    Item {
++      implicitWidth: activeHorizontalBlock.implicitWidth + inactiveHorizontalArea.implicitWidth
++      implicitHeight: Math.max(activeHorizontalBlock.implicitHeight, inactiveHorizontalArea.implicitHeight)
++      width: implicitWidth
++      height: implicitHeight
++
++      Row {
++        id: horizontalIndicators
++
++        spacing: 0
++
++        HoverHandler {
++          onHoveredChanged: root.setIndicatorAreaHovered(hovered)
++        }
++
++        Item {
++          id: inactiveHorizontalArea
++
++          implicitWidth: root.revealInactiveIndicators ? inactiveHorizontalBlock.implicitWidth : 0
++          implicitHeight: Math.max(inactiveHorizontalBlock.implicitHeight, root.barSize)
++          width: implicitWidth
++          height: implicitHeight
++          clip: true
++
++          IndicatorBlock {
++            id: inactiveHorizontalBlock
++            anchors.verticalCenter: parent.verticalCenter
++            indicatorsModule: root
++            indicatorEntries: root.indicatorEntries
++            indicatorBlock: "inactive"
++            horizontal: true
++            reportActiveState: !root.vertical
++          }
++
++          HoverHandler {
++            onHoveredChanged: root.setIndicatorAreaHovered(hovered)
++          }
++        }
++
++        ActiveIndicatorBlock {
++          id: activeHorizontalBlock
++          indicatorsModule: root
++          indicatorModel: activeIndicatorModel
++          horizontal: true
++          reportActiveState: !root.vertical
++        }
++      }
++    }
++  }
++
++  Component {
++    id: verticalIndicatorsTree
++
++    Item {
++      implicitWidth: Math.max(activeVerticalBlock.implicitWidth, inactiveVerticalArea.implicitWidth)
++      implicitHeight: activeVerticalBlock.implicitHeight + inactiveVerticalArea.implicitHeight
++      width: implicitWidth
++      height: implicitHeight
++
++      Column {
++        id: verticalIndicators
++
++        spacing: 0
++
++        HoverHandler {
++          onHoveredChanged: root.setIndicatorAreaHovered(hovered)
++        }
++
++        Item {
++          id: inactiveVerticalArea
++
++          implicitWidth: Math.max(inactiveVerticalBlock.implicitWidth, root.barSize)
++          implicitHeight: root.revealInactiveIndicators ? inactiveVerticalBlock.implicitHeight : 0
++          width: implicitWidth
++          height: implicitHeight
++          clip: true
++
++          IndicatorBlock {
++            id: inactiveVerticalBlock
++            anchors.horizontalCenter: parent.horizontalCenter
++            indicatorsModule: root
++            indicatorEntries: root.indicatorEntries
++            indicatorBlock: "inactive"
++            horizontal: false
++            reportActiveState: root.vertical
++          }
++
++          HoverHandler {
++            onHoveredChanged: root.setIndicatorAreaHovered(hovered)
++          }
++        }
++
++        ActiveIndicatorBlock {
++          id: activeVerticalBlock
++          indicatorsModule: root
++          indicatorModel: activeIndicatorModel
++          horizontal: false
++          reportActiveState: root.vertical
++        }
++      }
++    }
++  }
++
++  HoverHandler {
++    onHoveredChanged: root.setIndicatorAreaHovered(hovered)
++  }
++
++  component ActiveIndicatorBlock: Item {
++    id: activeIndicatorBlockRoot
++
++    property var indicatorModel: null
++    property var indicatorsModule: null
++    property bool horizontal: true
++    property bool reportActiveState: false
++
++    implicitWidth: blockLoader.item ? blockLoader.item.implicitWidth : 0
++    implicitHeight: blockLoader.item ? blockLoader.item.implicitHeight : 0
++    width: implicitWidth
++    height: implicitHeight
++
++    Loader {
++      id: blockLoader
++
++      anchors.centerIn: parent
++      sourceComponent: activeIndicatorBlockRoot.horizontal ? horizontalActiveIndicatorBlock : verticalActiveIndicatorBlock
++    }
++
++    Component {
++      id: horizontalActiveIndicatorBlock
++
++      Row {
++        spacing: 0
++
++        Repeater {
++          model: activeIndicatorBlockRoot.indicatorModel
++
++          IndicatorLoader {
++            required property string activeId
++            indicatorsModule: activeIndicatorBlockRoot.indicatorsModule
++            entry: activeIndicatorBlockRoot.indicatorsModule.entryForId(activeId)
++            indicatorBlock: "active"
++            reportActiveState: activeIndicatorBlockRoot.reportActiveState
++          }
++        }
++      }
++    }
++
++    Component {
++      id: verticalActiveIndicatorBlock
++
++      Column {
++        spacing: 0
++
++        Repeater {
++          model: activeIndicatorBlockRoot.indicatorModel
++
++          IndicatorLoader {
++            required property string activeId
++            indicatorsModule: activeIndicatorBlockRoot.indicatorsModule
++            entry: activeIndicatorBlockRoot.indicatorsModule.entryForId(activeId)
++            indicatorBlock: "active"
++            reportActiveState: activeIndicatorBlockRoot.reportActiveState
++          }
++        }
++      }
++    }
++  }
++
++  component IndicatorBlock: Item {
++    id: indicatorBlockRoot
++
++    property var indicatorEntries: []
++    property var indicatorsModule: null
++    property string indicatorBlock: "active"
++    property bool horizontal: true
++    property bool reportActiveState: false
++
++    implicitWidth: blockLoader.item ? blockLoader.item.implicitWidth : 0
++    implicitHeight: blockLoader.item ? blockLoader.item.implicitHeight : 0
++    width: implicitWidth
++    height: implicitHeight
++
++    Loader {
++      id: blockLoader
++
++      anchors.centerIn: parent
++      sourceComponent: indicatorBlockRoot.horizontal ? horizontalIndicatorBlock : verticalIndicatorBlock
++    }
++
++    Component {
++      id: horizontalIndicatorBlock
++
++      Row {
++        spacing: 0
++
++        Repeater {
++          model: indicatorBlockRoot.indicatorEntries
++
++          IndicatorLoader {
++            required property var modelData
++            indicatorsModule: indicatorBlockRoot.indicatorsModule
++            entry: modelData
++            indicatorBlock: indicatorBlockRoot.indicatorBlock
++            reportActiveState: indicatorBlockRoot.reportActiveState
++          }
++        }
++      }
++    }
++
++    Component {
++      id: verticalIndicatorBlock
++
++      Column {
++        spacing: 0
++
++        Repeater {
++          model: indicatorBlockRoot.indicatorEntries
++
++          IndicatorLoader {
++            required property var modelData
++            indicatorsModule: indicatorBlockRoot.indicatorsModule
++            entry: modelData
++            indicatorBlock: indicatorBlockRoot.indicatorBlock
++            reportActiveState: indicatorBlockRoot.reportActiveState
++          }
++        }
++      }
++    }
++  }
++
++  component IndicatorLoader: Item {
++    id: indicatorSlot
++
++    required property var entry
++    property var indicatorsModule: null
++    required property string indicatorBlock
++    property bool reportActiveState: false
++    property bool activeStateObserved: false
++    readonly property string indicatorId: root.entryId(entry)
++    readonly property var indicatorSettings: root.entrySettings(entry)
++    readonly property var barRef: root.bar
++
++    implicitWidth: indicatorSource.item && indicatorSource.item.visible ? indicatorSource.item.implicitWidth : 0
++    implicitHeight: indicatorSource.item && indicatorSource.item.visible ? indicatorSource.item.implicitHeight : 0
++    width: implicitWidth
++    height: implicitHeight
++    onEntryChanged: {
++      activeStateObserved = false
++      injectProps()
++      syncActiveState()
++    }
++    onIndicatorBlockChanged: injectProps()
++    onIndicatorSettingsChanged: injectProps()
++    onIndicatorsModuleChanged: {
++      injectProps()
++      syncActiveState()
++    }
++    onReportActiveStateChanged: syncActiveState()
++    onBarRefChanged: injectProps()
++
++    Loader {
++      id: indicatorSource
++
++      anchors.fill: parent
++      source: indicatorSlot.indicatorId ? Qt.resolvedUrl("file:///usr/share/omarchy/shell/plugins/bar/indicators/" + indicatorSlot.indicatorId + ".qml") : ""
++      onLoaded: {
++        indicatorSlot.injectProps()
++        indicatorSlot.syncActiveState()
++      }
++      onStatusChanged: if (status === Loader.Error) console.warn("Indicator loader error", indicatorSlot.indicatorId, source)
++    }
++
++    Connections {
++      target: indicatorSource.item
++      ignoreUnknownSignals: true
++      function onActiveChanged() { indicatorSlot.syncActiveState() }
++    }
++
++    function injectProps() {
++      var target = indicatorSource.item
++      if (!target) return
++      if ("bar" in target) target.bar = root.bar
++      if ("moduleName" in target) target.moduleName = indicatorId
++      if ("settings" in target) target.settings = indicatorSettings
++      if ("indicatorBlock" in target) target.indicatorBlock = indicatorBlock
++      if ("indicatorHost" in target) target.indicatorHost = root
++      if ("activeOverride" in target) target.activeOverride = indicatorBlock === "active" ? true : null
++    }
++
++    function syncActiveState() {
++      if (!reportActiveState || !indicatorsModule || !indicatorsModule.setIndicatorActive) return
++
++      var active = !!indicatorSource.item && indicatorSource.item.active === true
++      if (indicatorBlock === "active") {
++        if (active) activeStateObserved = true
++        else if (!activeStateObserved) return
++      }
++
++      indicatorsModule.setIndicatorActive(entry, active)
++    }
++  }
++}
+--- before/plugins/jackz.indicators/manifest.json
++++ after/plugins/jackz.indicators/manifest.json
+@@ -0,0 +1,73 @@
++{
++  "schemaVersion": 1,
++  "id": "jackz.indicators",
++  "name": "My Indicators",
++  "version": "1.0.0",
++  "author": "Omarchy",
++  "description": "Manual state indicators",
++  "kinds": [
++    "bar-widget"
++  ],
++  "entryPoints": {
++    "barWidget": "Indicators.qml"
++  },
++  "barWidget": {
++    "displayName": "Indicators",
++    "description": "Manual state indicators",
++    "category": "Status",
++    "allowMultiple": true,
++    "schema": [
++      {
++        "key": "items",
++        "type": "multiselect",
++        "label": "Indicators",
++        "description": "Choose which indicators this widget instance should show. Leave empty to show all indicators.",
++        "noSelectionText": "All indicators",
++        "placeholderText": "Search indicators...",
++        "emptyText": "No indicators",
++        "options": [
++          {
++            "value": "Dictation",
++            "label": "Dictation",
++            "description": "Voice typing status"
++          },
++          {
++            "value": "ScreenRecording",
++            "label": "Screen recording",
++            "description": "GPU screen recorder status"
++          },
++          {
++            "value": "Reminder",
++            "label": "Reminder",
++            "description": "Queued reminder status"
++          },
++          {
++            "value": "NightLight",
++            "label": "Night light",
++            "description": "Blue-light filter"
++          },
++          {
++            "value": "Dnd",
++            "label": "Do not disturb",
++            "description": "Notification silencing"
++          },
++          {
++            "value": "StayAwake",
++            "label": "Stay awake",
++            "description": "Idle lock and screensaver override"
++          }
++        ]
++      },
++      {
++        "key": "alwaysShow",
++        "type": "boolean",
++        "label": "Always Show",
++        "description": "Show inactive indicators without waiting for hover.",
++        "defaultValue": false
++      }
++    ]
++  },
++  "omarchy": {
++    "clonedFrom": "omarchy.indicators"
++  }
++}
+--- before/plugins/jackz.system-update/SystemUpdate.qml
++++ after/plugins/jackz.system-update/SystemUpdate.qml
+@@ -0,0 +1,66 @@
++import "../../bar/ipc" as LocalIpc
++import QtQuick
++import Quickshell
++import Quickshell.Io
++import qs.Commons
++import qs.Ui
++
++BarWidget {
++  id: root
++  moduleName: "omarchy.system-update"
++
++  property bool updateAvailable: false
++
++  function refresh() {
++    if (!updateProc.running) updateProc.running = true
++  }
++
++  function clear() { updateAvailable = false }
++
++  function runUpdate() {
++    if (root.bar) root.bar.run("omarchy-launch-floating-terminal-with-presentation omarchy-update")
++  }
++
++  visible: updateAvailable
++  implicitWidth: button.implicitWidth
++  implicitHeight: button.implicitHeight
++
++  LocalIpc.OwnedIpcHandler {
++    target: "omarchy.system-update"
++
++    function refresh(): void {
++      root.broadcast("refresh")
++    }
++
++    function clear(): void {
++      root.broadcast("clear")
++    }
++  }
++
++  Process {
++    id: updateProc
++    command: ["omarchy-update-available"]
++    onExited: function(exitCode) {
++      root.updateAvailable = exitCode === 0
++    }
++  }
++
++  Timer {
++    interval: 21600000
++    running: true
++    repeat: true
++    triggeredOnStart: true
++    onTriggered: root.refresh()
++  }
++
++  BarIconButton {
++    id: button
++    anchors.fill: parent
++    bar: root.bar
++    text: "\uf021"
++    slotSize: Style.bar.statusSlot
++    fontSize: Style.font.caption
++    tooltipText: "Pending Omarchy Updates"
++    onPressed: root.runUpdate()
++  }
++}
+--- before/plugins/jackz.system-update/manifest.json
++++ after/plugins/jackz.system-update/manifest.json
+@@ -0,0 +1,23 @@
++{
++  "schemaVersion": 1,
++  "id": "jackz.system-update",
++  "name": "My Omarchy update",
++  "version": "1.0.0",
++  "author": "Omarchy",
++  "description": "Indicates available Omarchy updates",
++  "kinds": [
++    "bar-widget"
++  ],
++  "entryPoints": {
++    "barWidget": "SystemUpdate.qml"
++  },
++  "barWidget": {
++    "displayName": "Omarchy update",
++    "description": "Indicates available Omarchy updates",
++    "category": "System",
++    "allowMultiple": false
++  },
++  "omarchy": {
++    "clonedFrom": "omarchy.system-update"
++  }
++}
+--- before/bar/modules/desktop-tools.qml
++++ after/bar/modules/desktop-tools.qml
+@@ -0,0 +1,19 @@
++import QtQuick
++import qs.Ui
++
++WidgetButton {
++  id: root
++  property string moduleName: "desktop-tools"
++  property var settings: ({})
++  text: String(settings.text || "")
++  tooltipText: String(settings.tooltip || "")
++  horizontalMargin: Number(settings.horizontalMargin ?? 7.5)
++  verticalPadding: Number(settings.verticalPadding ?? 6)
++  fontSize: Number(settings.fontSize ?? 12)
++  onPressed: function(button) {
++    var key = button === Qt.RightButton ? "onRightClick"
++      : button === Qt.MiddleButton ? "onMiddleClick" : "onClick"
++    var command = String(settings[key] || "")
++    if (command && bar) bar.run(command)
++  }
++}
+--- before/shell.json
++++ after/shell.json
+@@ -4,7 +4,7 @@
+     "layout": {
+       "center": [
+         {
+-          "id": "omarchy.indicators"
++          "id": "jackz.indicators"
+         },
+         {
+           "id": "omarchy.keyboard-layout"
+@@ -43,7 +43,7 @@
+           "menuOnly": true
+         },
+         {
+-          "id": "omarchy.system-update"
++          "id": "jackz.system-update"
+         },
+         {
+           "id": "djjeane.docker-monitor",
+@@ -53,7 +53,7 @@
+       "left": [
+         {
+           "id": "desktop-tools",
+-          "type": "command",
++          "type": "qml",
+           "text": "󰒓",
+           "tooltip": "Desktop Tools · Super+Ctrl+M",
+           "onClick": "/home/jackz/.local/bin/oma-cast run omarchy:desktop-tools"
+@@ -200,7 +200,9 @@
+     "omarchy.media",
+     "omarchy.menu",
+     "omarchy.clipboard",
+-    "omarchy.emojis"
++    "omarchy.emojis",
++    "omarchy.indicators",
++    "omarchy.system-update"
+   ],
+   "plugins": [
+     {
