@@ -1,3 +1,7 @@
+## Latest execution result
+
+Authenticated staging succeeded. `/etc/fstab` now has fmask=0077,dmask=0077; validation and systemd daemon-reload passed. Backup/rollback: `/var/backups/security-esp-20261108-dyb09hle`. Live mount remains 0022: next reboot and permission verification still required. No reboot performed. This supersedes the pending-authentication status below.
+
 # Security follow-up — parent integration
 
 The original live-activation batch was executed twice with authenticated root access. Both attempts captured firewall/SSH evidence successfully. Remount, then a full unmount/mount, returned success but retained fmask/dmask=0022. Validation caught this; both automatic rollbacks restored the original fstab and mounted ESP. The cause of retained live masks is not established. No reboot was performed.
