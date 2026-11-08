@@ -1,0 +1,213 @@
+--- a/qml/Service.qml
++++ b/qml/Service.qml
+@@ -80,9 +80,9 @@
+     property int resolveSpawnGen: 0
+     property bool ready: false
+     property bool startupPhase: true
+-    // Mirrors omarchy's first-party session services (omarchy.lock,
+-    // omarchy.idle) so tracking pauses during lock/screensaver without
+-    // touching the compositor or spawning helpers on the hot path.
++    // Session pause state (lock/screensaver) via supported read-only APIs:
++    // lock uses `omarchy-shell lock isLocked` IPC (persistent watcher process);
++    // screensaver uses in-process toplevel scan for org.omarchy.screensaver.
+     // startedAt timestamps only report pause durations in debug logs.
+     property bool sessionLocked: false
+     property bool screensaverActive: false
+@@ -90,10 +90,6 @@
+     property double screensaverStartedAt: 0
+     // Debug timing logs for lock/screensaver intervals; off by default.
+     property bool debugLogging: false
+-    property var lockService: null
+-    property var idleService: null
+-    // Shell injects the plugin API asynchronously; re-run lookups on change.
+-    onShellChanged: root.refreshShellServices()
+ 
+     // ---- Public read API for the UI ----------------------------------------
+     readonly property string barLabel: today ? Model.fmt(today.total) : ""
+@@ -541,28 +537,10 @@
+     }
+ 
+     // ---- Session pause (lock / screensaver) ----------------------------------
+-    // Lock state comes from omarchy.lock at the source instead of polling
+-    // loginctl, so lock/unlock needs no extra process spawning. The shell's
+-    // service registry fills asynchronously; lookups retry until both
+-    // services resolve, transitions are event-driven afterward.
+-    function refreshShellServices() {
+-        if (!root.shell)
+-            return;
+-        root.lockService = root.shell.serviceFor("omarchy.lock");
+-        root.idleService = root.shell.serviceFor("omarchy.idle");
+-        if (root.lockService) {
+-            root.setSessionLocked(root.lockService.locked);
+-            // Event-driven source wins once reachable; stop the fallback
+-            // watcher so it can't fight it or leak a bash loop.
+-            sessionStateWatcher.running = false;
+-        }
+-        if (root.idleService)
+-            root.setScreensaverActive(root.idleService.screensaverStartedThisCycle || root.idleService.screensaverWindowCount > 0);
+-        if (root.lockService && root.idleService) {
+-            serviceLookupTimer.stop();
+-            root.serviceLookupWarned = false;
+-        }
+-    }
++    // Lock state: `omarchy-shell lock isLocked` IPC via one persistent bash
++    // watcher (change-only output). Screensaver: in-process toplevel scan
++    // for org.omarchy.screensaver windows. Both are read-only, sandbox-safe,
++    // and need no service ownership.
+ 
+     function setSessionLocked(locked) {
+         locked = locked === true;
+@@ -650,32 +628,13 @@
+         root.switchActive();
+     }
+ 
+-    property bool serviceLookupWarned: false
+-
+-    Timer {
+-        id: serviceLookupTimer
+-        interval: 250
+-        repeat: true
+-        running: root.ready && (!root.lockService || !root.idleService)
+-        property int attempts: 0
+-        onTriggered: {
+-            root.refreshShellServices();
+-            attempts++;
+-            if (attempts >= 40 && !root.serviceLookupWarned) {
+-                // Sandboxed serviceFor may never resolve these (scoped to a
+-                // plugin's own service). Warn once instead of failing silent.
+-                root.serviceLookupWarned = true;
+-                console.warn("agx.screen-time: omarchy.lock/omarchy.idle services unavailable after 10s; " + "falling back to a persistent lock watcher (~10s pause accuracy)");
+-            }
+-        }
+-    }
+-
+-    // Fallback when sandboxed lookups can't reach lock/idle services: one
+-    // persistent watcher checking lock every 10s, printing only on change.
+-    // Stops automatically if event-driven lookups ever succeed.
++    // Lock watcher: one persistent bash process polling `omarchy-shell lock
++    // isLocked` every 10s, printing only on change. Exits when parent dies.
++    // Started immediately on ready; supervisor restarts if it crashes.
+     Process {
+         id: sessionStateWatcher
+         environment: root.procEnv
++        running: root.ready
+         command: ["bash", "-c", "ppid=$PPID; prev=''; while :; do " + "kill -0 $ppid 2>/dev/null || exit 0; " + "cur=$(omarchy-shell lock isLocked 2>/dev/null); " + "if [ -n \"$cur\" ] && [ \"$cur\" != \"$prev\" ]; then printf '%s\\n' \"$cur\"; prev=\"$cur\"; fi; " + "sleep 10; done"]
+         stdout: SplitParser {
+             onRead: function (line) {
+@@ -684,25 +643,24 @@
+         }
+     }
+ 
+-    // Restarts the watcher if it exits while lock service stays unreachable.
++    // Restarts the watcher if it exits unexpectedly (crash, signal).
+     Timer {
+         id: watcherSupervisorTimer
+         interval: 5000
+         repeat: true
+-        running: root.ready && !root.lockService
++        running: root.ready
+         onTriggered: {
+-            if (!root.lockService && !sessionStateWatcher.running)
++            if (!sessionStateWatcher.running)
+                 sessionStateWatcher.running = true;
+         }
+     }
+ 
+-    // Screensaver fallback is an in-process toplevel scan (no spawning),
+-    // running only while the idle service is unreachable.
++    // Screensaver detection: in-process toplevel scan (no spawning).
+     Timer {
+         id: screensaverScanTimer
+         interval: 10000
+         repeat: true
+-        running: root.ready && !root.idleService
++        running: root.ready
+         onTriggered: root.setScreensaverActive(root.screensaverWindowVisible())
+     }
+ 
+@@ -718,24 +676,6 @@
+                 return true;
+         }
+         return false;
+-    }
+-
+-    // Event-driven sources, used whenever the sandboxed lookups succeed.
+-    Connections {
+-        target: root.lockService
+-        function onLockedChanged() {
+-            root.setSessionLocked(root.lockService.locked);
+-        }
+-    }
+-
+-    Connections {
+-        target: root.idleService
+-        function onScreensaverStartedThisCycleChanged() {
+-            root.setScreensaverActive(root.idleService.screensaverStartedThisCycle);
+-        }
+-        function onScreensaverWindowCountChanged() {
+-            root.setScreensaverActive(root.idleService.screensaverWindowCount > 0);
+-        }
+     }
+ 
+     // Fresh baseline resolves suspends down to ~30s.
+--- a/tests/service.test.js
++++ b/tests/service.test.js
+@@ -13,8 +13,6 @@
+ test("service tracks lock and screensaver state", () => {
+   assert.match(service, /property bool sessionLocked: false/)
+   assert.match(service, /property bool screensaverActive: false/)
+-  assert.match(service, /serviceFor\("omarchy\.lock"\)/)
+-  assert.match(service, /serviceFor\("omarchy\.idle"\)/)
+   assert.match(service, /function setSessionLocked\(locked\)/)
+   assert.match(service, /function setScreensaverActive\(active\)/)
+ })
+@@ -53,10 +51,8 @@
+   )
+ })
+ 
+-test("falls back to a persistent lock watcher when services are unavailable", () => {
+-  // Scoped plugin shells may never resolve the lock/idle services; the
+-  // plugin must say so once and watch instead of accruing through locks.
+-  assert.match(service, /property bool serviceLookupWarned: false/)
++test("lock watcher uses supported IPC and starts with ready", () => {
++  // Lock state via `omarchy-shell lock isLocked` IPC (read-only).
+   assert.match(service, /id: sessionStateWatcher/)
+   assert.match(service, /omarchy-shell lock isLocked/)
+   // Exits when its parent shell dies, so restarts don't accumulate watchers.
+@@ -69,17 +65,11 @@
+   )
+   assert.doesNotMatch(service, /id: lockPollProc/)
+   assert.doesNotMatch(service, /StdioCollector \{\s*\n\s*id: lockPollOut/)
+-  // Watcher is supervised while the lock service is unreachable, and
+-  // stopped the moment the event-driven path becomes available.
++  // Watcher starts when ready; supervisor restarts on crash.
++  assert.match(service, /running: root\.ready/)
+   assert.match(service, /id: watcherSupervisorTimer/)
+-  assert.match(service, /running: root\.ready && !root\.lockService/)
+-  assert.match(
+-    service,
+-    /if \(root\.lockService\) \{\s*\n\s*root\.setSessionLocked[\s\S]*?sessionStateWatcher\.running = false/,
+-  )
+-  // The screensaver fallback is an in-process scan, no spawning.
++  // The screensaver scan is in-process, no spawning.
+   assert.match(service, /id: screensaverScanTimer/)
+-  assert.match(service, /running: root\.ready && !root\.idleService/)
+   assert.match(service, /function screensaverWindowVisible/)
+   // The watcher feeds the same pause state machine; no bucket handling in
+   // the watcher process block.
+@@ -108,8 +98,13 @@
+   assert(ssStart && ssStart[0].includes("root.cancelResume()"))
+ })
+ 
+-test("warns once instead of failing silently when services never appear", () => {
+-  assert.match(service, /services unavailable after 10s/)
++test("does not use unsupported serviceFor for lock or idle", () => {
++  // shell.serviceFor() is ownership-scoped and returns null for cross-plugin
++  // lookups; the plugin must not waste cycles on impossible lookups.
++  assert.doesNotMatch(service, /serviceFor\("omarchy\.lock"\)/)
++  assert.doesNotMatch(service, /serviceFor\("omarchy\.idle"\)/)
++  assert.doesNotMatch(service, /serviceLookupTimer/)
++  assert.doesNotMatch(service, /serviceLookupWarned/)
+ })
+ 
+ test("tracking prefs filter ignored apps and rename via aliases", () => {
