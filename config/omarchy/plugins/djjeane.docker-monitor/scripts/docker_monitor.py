@@ -84,7 +84,7 @@ def get_stats() -> dict[str, dict]:
 
 def main() -> int:
     containers = list_containers()
-    stats = get_stats()
+    stats = {} if "--status-only" in sys.argv[1:] else get_stats()
 
     running = 0
     stopped = 0

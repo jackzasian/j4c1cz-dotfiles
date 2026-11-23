@@ -57,6 +57,7 @@ Panel {
   function refresh() {
     if (!monitorProc.running) {
       loading = true
+      monitorProc.statusOnly = !root.opened
       monitorProc.running = true
     }
   }
@@ -183,24 +184,26 @@ Panel {
 
   onOpenedChanged: {
     if (opened) {
-      pollTimer.running = true
       refresh()
       refreshMacmini()
     } else {
       viewMode = "list"
       selectedContainer = ""
-      idleTimer.restart()
     }
   }
 
-  Component.onCompleted: { refresh(); refreshMacmini() }
+  Component.onCompleted: { refresh(); if (opened) refreshMacmini() }
 
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
 
   Process {
     id: monitorProc
-    command: ["python3", pathFromUrl(Qt.resolvedUrl("scripts/docker_monitor.py"))]
+    property bool statusOnly: false
+    command: ["python3", pathFromUrl(Qt.resolvedUrl("scripts/docker_monitor.py"))].concat(statusOnly ? ["--status-only"] : [])
+    onExited: {
+      if (statusOnly && root.opened) Qt.callLater(root.refresh)
+    }
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: root.handleOutput(text)
@@ -238,8 +241,7 @@ Panel {
   }
 
   Timer {
-    id: pollTimer
-    interval: root.pollInterval * 1000
+    interval: (root.opened ? root.pollInterval : Math.max(30, root.pollInterval)) * 1000
     running: true
     repeat: true
     onTriggered: root.refresh()
@@ -251,17 +253,9 @@ Panel {
   Timer {
     id: macminiPollTimer
     interval: 60000
-    running: true
+    running: root.opened
     repeat: true
     onTriggered: root.refreshMacmini()
-  }
-
-  Timer {
-    id: idleTimer
-    interval: 60000
-    running: false
-    repeat: false
-    onTriggered: pollTimer.interval = 30000
   }
 
   WidgetButton {
