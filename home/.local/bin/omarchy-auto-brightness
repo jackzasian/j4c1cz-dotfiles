@@ -1,0 +1,161 @@
+#!/usr/bin/env python3
+"""omarchy:summary=ALS-driven auto brightness for the ThinkPad panel and (best-effort) the docked Studio Display.
+
+Polls /sys/bus/iio/devices/iio:device0 (the laptop lid's ambient light sensor,
+`als`) every poll_interval_sec, smooths it with an exponential moving average
+so a passing hand or a monitor's own flicker doesn't cause visible brightness
+jitter, and maps the result to a target percent via a log-scale piecewise
+curve (config.json) applied to the ThinkPad panel via brightnessctl.
+
+The curve's anchor points were set blind (no lux meter on this machine) --
+see ~/.config/omarchy-auto-brightness/config.json to retune; each pair is
+[raw_illuminance_reading, target_percent].
+
+Studio Display: best-effort only. Reuses the same hiddev device cache
+omarchy-brightness-display-apple writes
+($XDG_RUNTIME_DIR/omarchy-brightness-display-apple.device) and calls
+`sudo -n asdcontrol ...` directly -- non-interactive, so it silently no-ops
+until /etc/sudoers.d/*-asdcontrol is actually active (see
+audio-switcher.md / the asdcontrol sudo investigation in Hermes) rather than
+ever popping a password prompt from a background loop. Once that sudoers
+question is resolved, this starts covering the Studio Display automatically
+with no further changes here.
+
+Backs off for override_cooldown_sec after noticing the panel's actual
+brightness diverged from what this daemon itself last applied (the user hit
+a brightness key). Respects a pause file
+(~/.local/state/omarchy-auto-brightness/paused) so hypridle's dim-before-lock
+step doesn't fight this loop while the screen is intentionally dimmed.
+"""
+import json
+import math
+import os
+import pathlib
+import subprocess
+import time
+
+CONFIG_PATH = pathlib.Path.home() / ".config/omarchy-auto-brightness/config.json"
+STATE_DIR = pathlib.Path(os.environ.get("XDG_STATE_HOME", str(pathlib.Path.home() / ".local/state"))) / "omarchy-auto-brightness"
+PAUSE_FILE = STATE_DIR / "paused"
+ALS_RAW = pathlib.Path("/sys/bus/iio/devices/iio:device0/in_illuminance_raw")
+ALS_SCALE = pathlib.Path("/sys/bus/iio/devices/iio:device0/in_illuminance_scale")
+PANEL_BACKLIGHT = pathlib.Path("/sys/class/backlight/intel_backlight")
+RUNTIME_DIR = pathlib.Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp"))
+STUDIO_DEVICE_CACHE = RUNTIME_DIR / "omarchy-brightness-display-apple.device"
+
+DEFAULT_CONFIG = {
+    "poll_interval_sec": 3,
+    "smoothing_alpha": 0.25,
+    "override_cooldown_sec": 600,
+    "change_threshold_percent": 2,
+    "min_percent": 2,
+    "max_percent": 100,
+    "studio_enabled": True,
+    "curve": [[5, 5], [50, 15], [500, 40], [2000, 65], [8000, 85], [20000, 100]],
+}
+
+
+def load_config():
+    try:
+        return {**DEFAULT_CONFIG, **json.loads(CONFIG_PATH.read_text())}
+    except Exception:
+        return dict(DEFAULT_CONFIG)
+
+
+def read_als_lux():
+    try:
+        raw = int(ALS_RAW.read_text().strip())
+        scale = float(ALS_SCALE.read_text().strip())
+    except Exception:
+        return None
+    return raw * scale
+
+
+def curve_percent(lux, curve):
+    pts = sorted((float(l), float(p)) for l, p in curve)
+    lux = max(lux, 0.1)
+    if lux <= pts[0][0]:
+        return pts[0][1]
+    if lux >= pts[-1][0]:
+        return pts[-1][1]
+    for (l0, p0), (l1, p1) in zip(pts, pts[1:]):
+        if l0 <= lux <= l1:
+            f = (math.log10(lux) - math.log10(l0)) / (math.log10(l1) - math.log10(l0))
+            return p0 + f * (p1 - p0)
+    return pts[-1][1]
+
+
+def panel_current_percent():
+    try:
+        cur = int((PANEL_BACKLIGHT / "brightness").read_text().strip())
+        mx = int((PANEL_BACKLIGHT / "max_brightness").read_text().strip())
+        return round(cur * 100 / mx)
+    except Exception:
+        return None
+
+
+def set_panel(percent):
+    subprocess.run(
+        ["brightnessctl", "set", f"{percent}%"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False,
+    )
+
+
+def set_studio(percent):
+    try:
+        dev = STUDIO_DEVICE_CACHE.read_text().strip()
+    except Exception:
+        return False
+    if not dev or not os.path.exists(dev):
+        return False
+    result = subprocess.run(
+        ["sudo", "-n", "/usr/bin/asdcontrol", dev, "--", f"{percent}%"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False,
+    )
+    return result.returncode == 0
+
+
+def main():
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    ema = None
+    panel_baseline = None
+    override_until = 0.0
+
+    while True:
+        cfg = load_config()  # re-read each cycle so config.json edits apply live
+        time.sleep(cfg["poll_interval_sec"])
+
+        if PAUSE_FILE.exists():
+            continue
+
+        lux = read_als_lux()
+        if lux is None:
+            continue
+
+        alpha = cfg["smoothing_alpha"]
+        ema = lux if ema is None else (alpha * lux + (1 - alpha) * ema)
+        target = round(curve_percent(ema, cfg["curve"]))
+        target = max(cfg["min_percent"], min(cfg["max_percent"], target))
+
+        now = time.monotonic()
+        actual = panel_current_percent()
+        if panel_baseline is not None and actual is not None and abs(actual - panel_baseline) > 3:
+            # Remember the new level so a held setting only starts one cooldown.
+            override_until = now + cfg["override_cooldown_sec"]
+            print(f"omarchy-auto-brightness: manual override detected (panel now {actual}%, "
+                  f"previously {panel_baseline}%) -- backing off {cfg['override_cooldown_sec']}s", flush=True)
+            panel_baseline = actual
+
+        if now < override_until:
+            continue
+
+        if panel_baseline is None or abs(target - panel_baseline) >= cfg["change_threshold_percent"]:
+            set_panel(target)
+            if cfg.get("studio_enabled", True):
+                set_studio(target)
+            print(f"omarchy-auto-brightness: lux~{ema:.0f} -> {target}%", flush=True)
+            panel_baseline = target
+
+
+if __name__ == "__main__":
+    main()
