@@ -33,7 +33,17 @@ vercel() {
 }
 
 # Added by LM Studio CLI (lms)
-export PATH="$PATH:/home/jackz/.lmstudio/bin"
+case ":$PATH:" in
+    *":$HOME/.lmstudio/bin:"*) ;;
+    *) export PATH="$PATH:$HOME/.lmstudio/bin" ;;
+esac
 # End of LM Studio CLI section
 
-export PATH="$HOME/bin:$PATH"
+# Keep local wrappers first when mise or a parent shell has already set PATH.
+_shell_path=":$PATH:"
+while [[ $_shell_path == *":$HOME/bin:"* ]]; do
+    _shell_path=${_shell_path/":$HOME/bin:"/:}
+done
+_shell_path=${_shell_path#:}
+export PATH="$HOME/bin:${_shell_path%:}"
+unset _shell_path
